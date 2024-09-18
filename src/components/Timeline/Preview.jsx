@@ -1,17 +1,33 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 import { useState, useEffect, useRef } from "react";
-import html2canvas from "html2canvas"; // You need to install html2canvas
-import RecordRTC from "recordrtc"; // You need to install RecordRTC
+import { Stage, Layer, Image } from "react-konva";
+import useImage from "use-image";
+import { CanvasRecorder } from "../../utils/canvaRecorder";
 
 const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
   const layoutWidth = 400;
   const layoutHeight = 300;
   const layoutRef = useRef(null);
+  const [recorder, setRecorder] = useState(null);
 
   // for recording
+  useEffect(() => {
+    const canvas = document.querySelector("canvas");
+    if (canvas) {
+      const newRecorder = new CanvasRecorder(canvas, 8000000);
+      setRecorder(newRecorder);
+      newRecorder.start(); // Start recording on preview load
+    }
+  }, []);
 
   const handleDownload = () => {
-    alert("downloading in progress.");
+    recorder.stop();
+    recorder.save("preview-recording.webm");
   };
+
+  setTimeout(() => {
+    handleDownload();
+  }, 10000);
   // Function to calculate the total duration of the layout based on the longest division
   const calculateTotalDuration = () => {
     if (!divisionsMedia || Object.keys(divisionsMedia).length === 0) {
@@ -95,7 +111,6 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
 
       return () => clearInterval(intervalId);
     }, [mediaItems, currentMediaIndex, mediaStartTime]);
-
     return { currentMediaIndex, isCycling };
   };
 
@@ -116,7 +131,7 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
           ref={layoutRef}
           className="flex items-center justify-center mb-2 flex-col gap-1"
         >
-          <div
+          {/* <div
             id="div-to-record"
             className="relative border border-black"
             style={{
@@ -124,9 +139,7 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
               height: `${layoutHeight}px`,
             }}
           >
-            {/* Render the layout */}
             <div className="absolute top-0 left-0 w-full h-full" />
-            {/* Render divisions */}
             {layout.divisions.map((division, index) => {
               const { currentMediaIndex, isCycling } = useMediaCycler(
                 divisionsMedia[index] || []
@@ -184,7 +197,40 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
                 </div>
               );
             })}
-          </div>
+
+          </div> */}
+          <Stage
+            width={layoutWidth}
+            height={layoutHeight}
+            style={{ border: "2px solid black" }}
+            ref={layoutRef}
+          >
+            <Layer>
+              {layout?.divisions?.map((d, index) => {
+                const { currentMediaIndex, isCycling } = useMediaCycler(
+                  divisionsMedia[index] || []
+                );
+                const [image] = useImage(
+                  divisionsMedia[index][currentMediaIndex].mediaSrc
+                );
+                return (
+                  <>
+                    {isCycling && (
+                      <Image
+                        image={image}
+                        x={d?.x}
+                        y={d?.y}
+                        width={d?.width}
+                        height={d?.height}
+                        stroke="black"
+                        strokeWidth={1}
+                      />
+                    )}
+                  </>
+                );
+              })}
+            </Layer>
+          </Stage>
 
           {/* Progress bar */}
           <div className="w-full bg-gray-300 h-2 rounded mb-4">
