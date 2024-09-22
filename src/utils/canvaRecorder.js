@@ -75,6 +75,11 @@ function CanvasRecorder(canvas, video_bits_per_sec) {
   function handleStop(event) {
     const superBuffer = new Blob(_this.recordedBlobs, { type: supportedType });
     video.src = window.URL.createObjectURL(superBuffer);
+
+    // Ensure the recorded blobs are not empty
+    if (_this.recordedBlobs.length === 0) {
+      console.error("No recorded data available.");
+    }
   }
 
   function stopRecording() {
