@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Stage, Rect, Layer, Image } from "react-konva";
 import useImage from "use-image";
-import { FFmpeg } from "@ffmpeg/ffmpeg";
-import { fetchFile, toBlobURL } from "@ffmpeg/util";
+// import { FFmpeg } from "@ffmpeg/ffmpeg";
+// import { fetchFile, toBlobURL } from "@ffmpeg/util";
 
 const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
   const layoutWidth = 400;
@@ -10,7 +10,7 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
   const layoutRef = useRef(null);
   const layerRef = useRef(null);
 
-  const [ffmpegLoaded, setFfmpegLoaded] = useState(false); // Add this line
+  // const [ffmpegLoaded, setFfmpegLoaded] = useState(false); // Add this line
 
   // Store recorded chunks in a ref to be accessed later
   const recordedChunksRef = useRef([]);
@@ -21,23 +21,25 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       return 0; // Return 0 if divisionsMedia is empty
     }
 
-    // Calculate the longest time for each division's media items
+    // Calculate the maximum time for any division's media items
     const maxDivisionDuration = Object.values(divisionsMedia).reduce(
       (maxDuration, mediaItems) => {
         if (!Array.isArray(mediaItems)) return maxDuration;
-        // Calculate the total appearanceTime for the division's media items
+        // Sum the total appearanceTime for each division's media items
         const divisionDuration = mediaItems.reduce(
           (total, item) => total + item.appearanceTime,
           0
         );
-        return Math.max(maxDuration, divisionDuration); // Keep track of the maximum division duration
+        // Return the maximum duration between divisions
+        return Math.max(maxDuration, divisionDuration);
       },
       0
     );
-    // console.log("maxDivisionDuration : ", maxDivisionDuration);
 
+    console.log("maxDivisionDuration in total(): ", maxDivisionDuration);
     return maxDivisionDuration;
   };
+
   // Function to calculate the total duration of the layout based on the longest division end
 
   const totalDuration = calculateTotalDuration(); // Total duration in seconds
@@ -72,13 +74,11 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
 
     const currentMedia = mediaItems[currentMediaIndex];
     const videoElement = useVideoElement(
-      currentMedia?.mediaType === "video" ? currentMedia.mediaSrc : null, // Correctly identify mediaType for video
-      layerRef // Pass the layerRef for canvas update
+      currentMedia?.mediaType === "video" ? currentMedia.mediaSrc : null,
+      layerRef
     );
 
     useEffect(() => {
-      // console.log("currentMedia in useMediaCycler:", currentMedia); // Log current media
-
       if (mediaItems.length === 0 || !layerRef.current) return;
       const mediaDuration = currentMedia?.appearanceTime * 1000 || 0;
 
@@ -100,7 +100,7 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
             const nextIndex = (prevIndex + 1) % mediaItems.length;
             setMediaStartTime(Date.now());
 
-            // Pause current video
+            // Pause the current video
             if (
               currentMedia?.mediaType === "video" &&
               videoElement instanceof HTMLVideoElement
@@ -124,72 +124,55 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
 
       return () => {
         clearInterval(intervalId);
-        // Pause the video only if videoElement is a valid HTMLVideoElement
         if (videoElement instanceof HTMLVideoElement) {
           videoElement.pause();
         }
       };
-    }, [
-      mediaItems,
-      currentMediaIndex,
-      mediaStartTime,
-      videoElement,
-      currentMedia,
-      layerRef,
-    ]);
+    }, [mediaItems, currentMediaIndex, mediaStartTime, videoElement, layerRef]);
 
     return { currentMediaIndex, isCycling, videoElement };
   };
+
   // Custom hook to manage media cycling end
 
   // Use effect to start recording when component mounts start
   useEffect(() => {
     if (totalDuration === 0) return;
 
-    // Reset progress to 0 before starting
+    console.log("totalDuration in useffect : ", totalDuration);
     setProgress(0);
-    setStartTime(Date.now()); // Reset start time
+    setStartTime(Date.now());
 
     const canvas = layoutRef.current.querySelector("canvas");
     if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
-
-    // Set background color to white
-    ctx.fillStyle = "white";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
     const stream = canvas.captureStream();
     const mediaRecorder = new MediaRecorder(stream);
-    recordedChunksRef.current = []; // Reset chunks
+    recordedChunksRef.current = [];
 
     mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
         recordedChunksRef.current.push(event.data);
-        console.log("WebM chunk recorded", event.data); // Add this to verify chunks are recorded
+        console.log("WebM chunk recorded", event.data);
       }
     };
 
     mediaRecorder.start();
 
-    // Stop recording after the total duration
+    // Stop recording after the calculated total duration
     const recordingDuration = totalDuration * 1000; // Convert to milliseconds
     setTimeout(() => {
       mediaRecorder.stop();
     }, recordingDuration);
 
-    // console.log("totalDuration in recording useffect : ", totalDuration);
-    // Progress bar logic
     const intervalId = setInterval(() => {
-      const elapsedTime = (Date.now() - startTime) / 1000; // Convert to seconds
+      const elapsedTime = (Date.now() - startTime) / 1000;
       const progressPercentage = Math.min(
         (elapsedTime / totalDuration) * 100,
         100
       );
       setProgress(progressPercentage);
 
-      // console.log("intervalId in useffect recording : ", intervalId);
-      // console.log("progressPercentage in liast effect : ", progressPercentage);
       if (progressPercentage >= 100) {
         clearInterval(intervalId);
       }
@@ -197,70 +180,17 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
 
     return () => {
       clearInterval(intervalId);
-      mediaRecorder.stop(); // Stop recording on component unmount
+      mediaRecorder.stop();
     };
   }, [totalDuration]);
+
   // Use effect to start recording when component mounts end
 
   // Update the handleDownload function to download recorded video start
 
-  const ffmpegRef = useRef(new FFmpeg());
+  // const ffmpegRef = useRef(new FFmpeg());
 
-  const handleDownload = async () => {
-    const ffmpeg = ffmpegRef.current;
-
-    // Check if FFmpeg is already loaded, otherwise load it
-    if (!ffmpegLoaded) {
-      const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
-      console.log("Loading FFmpeg...");
-
-      // Retry logic in case of failure
-      const retryLoadFFmpeg = async (retries, delay) => {
-        for (let i = 0; i < retries; i++) {
-          try {
-            const ffmpegLoadPromise = ffmpeg.load({
-              coreURL: await toBlobURL(
-                `${baseURL}/ffmpeg-core.js`,
-                "text/javascript"
-              ),
-              wasmURL: await toBlobURL(
-                `${baseURL}/ffmpeg-core.wasm`,
-                "application/wasm"
-              ),
-            });
-
-            // Set a longer timeout limit for FFmpeg loading (e.g., 30 seconds)
-            const timeout = new Promise((_, reject) =>
-              setTimeout(
-                () => reject(new Error("FFmpeg load timed out. Try again.")),
-                30000
-              )
-            );
-
-            await Promise.race([ffmpegLoadPromise, timeout]); // Race the loading and timeout
-            setFfmpegLoaded(true); // Set FFmpeg as loaded
-            console.log("FFmpeg loaded successfully.");
-            return; // Exit retry loop if successful
-          } catch (error) {
-            console.error(
-              `FFmpeg load attempt ${i + 1} failed: ${error.message}`
-            );
-            if (i < retries - 1) {
-              await new Promise((resolve) => setTimeout(resolve, delay)); // Delay before retrying
-            }
-          }
-        }
-        alert(
-          "Failed to load FFmpeg after several attempts. Please check your connection and try again."
-        );
-        return; // Exit the function if FFmpeg fails to load after retries
-      };
-
-      // Try loading FFmpeg with 3 retries and 5 seconds delay between each retry
-      await retryLoadFFmpeg(3, 5000);
-    }
-
-    // Check if recorded chunks exist
+  const handleDownloadAsWebM = async () => {
     if (recordedChunksRef.current.length === 0) {
       alert("No recording available to download!");
       return;
@@ -272,37 +202,57 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
         type: "video/webm",
       });
 
-      // Write WebM data to FFmpeg's virtual file system
-      console.log("Writing WebM file to FFmpeg...");
-      await ffmpeg.writeFile(
-        "input.webm",
-        new Uint8Array(await webmBlob.arrayBuffer())
-      );
+      // console.log(WebM Blob size: ${webmBlob.size} bytes);
+      if (webmBlob.size === 0) {
+        throw new Error("Recorded WebM Blob is empty. No video was captured.");
+      }
 
-      // Transcode WebM to MP4
-      console.log("Starting FFmpeg conversion to MP4...");
-      await ffmpeg.exec(["-i", "input.webm", "-c:v", "libx264", "output.mp4"]);
+      // Create WebM download link
+      const webmUrl = URL.createObjectURL(webmBlob);
+      const aWebM = document.createElement("a");
+      aWebM.href = webmUrl;
+      aWebM.download = "canvas-recording.webm"; // Save as .webm
+      document.body.appendChild(aWebM);
+      aWebM.click();
+      document.body.removeChild(aWebM);
 
-      // Read the resulting MP4 file from FFmpeg's virtual file system
-      console.log("Reading MP4 output from FFmpeg...");
-      const mp4Data = ffmpeg.readFile("output.mp4");
-      const mp4Blob = new Blob([mp4Data.buffer], { type: "video/mp4" });
-      const mp4Url = URL.createObjectURL(mp4Blob);
+      console.log("WebM downloaded successfully.");
+    } catch (error) {
+      console.error("Error during WebM download:", error);
+      alert("An error occurred during the WebM download process.");
+    }
+  };
 
-      // Create MP4 download link
+  const handleDownloadAsMP4 = async () => {
+    if (recordedChunksRef.current.length === 0) {
+      alert("No recording available to download!");
+      return;
+    }
+
+    try {
+      // Save as WebM but rename as MP4
+      const webmBlob = new Blob(recordedChunksRef.current, {
+        type: "video/webm",
+      });
+
+      // console.log(`WebM Blob size: ${webmBlob.size} bytes`);
+      if (webmBlob.size === 0) {
+        throw new Error("Recorded WebM Blob is empty. No video was captured.");
+      }
+
+      // Rename WebM Blob as MP4 (this doesn't convert the format)
+      const mp4Url = URL.createObjectURL(webmBlob);
       const aMp4 = document.createElement("a");
       aMp4.href = mp4Url;
-      aMp4.download = "canvas-recording.mp4";
+      aMp4.download = "canvas-recording.mp4"; // Rename extension to .mp4
       document.body.appendChild(aMp4);
       aMp4.click();
       document.body.removeChild(aMp4);
 
       console.log("MP4 downloaded successfully.");
     } catch (error) {
-      console.error("Error during FFmpeg conversion:", error);
-      alert(
-        "An error occurred during the conversion process. Please check the console for more details."
-      );
+      console.error("Error during simple WebM rename to MP4:", error);
+      alert("An error occurred during the MP4 download process.");
     }
   };
 
@@ -448,19 +398,19 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
           </div>
         </div>
 
-        {/* Download button */}
+        {/* Download buttons */}
         <button
           className="px-2 py-1 bg-blue-500 hover:bg-blue-700 text-white cursor-pointer rounded mb-2"
-          onClick={handleDownload}
+          onClick={handleDownloadAsWebM}
         >
           Download as WebM
         </button>
-        {/* <button
+        <button
           className="px-2 py-1 bg-green-500 hover:bg-green-700 text-white cursor-pointer rounded"
-          onClick={handleDownloadMP4}
+          onClick={handleDownloadAsMP4}
         >
-          {loading ? "Loading..." : "Download as MP4"}
-        </button> */}
+          Download as MP4
+        </button>
       </div>
     </div>
   );

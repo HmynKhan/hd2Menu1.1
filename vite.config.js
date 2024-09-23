@@ -5,12 +5,7 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
-    exclude: ["worker.js"], // Exclude worker.js from the dep optimizer
+    // exclude: ["worker.js"], // Exclude worker.js from the dep optimizer
+    exclude: ["@ffmpeg/ffmpeg", "@ffmpeg/util"], // Exclude problematic dependencies
   },
 });
-
-// export default {
-//   optimizeDeps: {
-//     exclude: ['worker.js'], // Exclude worker.js from the dep optimizer
-//   },
-// };
