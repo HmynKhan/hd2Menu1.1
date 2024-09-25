@@ -238,19 +238,22 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
   const handleDownload = async () => {
     const ffmpeg = ffmpegRef.current;
 
+    console.log("Starting download process...");
+
     // Check if FFmpeg is already loaded, otherwise load it
     if (!ffmpegLoaded) {
-      const baseURL = "https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/esm"; // Multi-threaded version
+      const baseURL = "https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/esm";
       console.log("Loading FFmpeg (multi-threaded)...");
 
       const retryLoadFFmpeg = async (retries, delay) => {
         for (let i = 0; i < retries; i++) {
           try {
             ffmpeg.on("log", ({ message }) => {
-              console.log(message); // Log FFmpeg messages
+              console.log(`[FFmpeg] ${message}`); // Log FFmpeg messages in real-time
             });
 
             // Load FFmpeg with multi-threaded core
+            console.log("Attempting to load FFmpeg...");
             await ffmpeg.load({
               coreURL: await toBlobURL(
                 `${baseURL}/ffmpeg-core.js`,
@@ -267,76 +270,85 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
             });
 
             setFfmpegLoaded(true);
-            console.log("FFmpeg loaded successfully (multi-threaded).");
+            console.log("FFmpeg loaded successfully.");
             return;
           } catch (error) {
             console.error(`FFmpeg load attempt ${i + 1} failed:`, error);
             if (i < retries - 1) {
-              await new Promise((resolve) => setTimeout(resolve, delay)); // Retry after a delay
+              await new Promise((resolve) => setTimeout(resolve, delay));
             }
           }
         }
-
         alert("Failed to load FFmpeg after several attempts.");
         return;
       };
 
-      await retryLoadFFmpeg(3, 5000); // Retry 3 times with a 5-second delay
+      await retryLoadFFmpeg(3, 5000);
       if (!ffmpegLoaded) {
-        return; // Exit if FFmpeg failed to load
+        return;
       }
     }
 
+    // Check if any recorded chunks are available
     if (recordedChunksRef.current.length === 0) {
       alert("No recording available to download!");
       return;
     }
 
     try {
-      // Save as WebM
+      // Log before creating WebM Blob
+      console.log("Creating WebM Blob from recorded chunks...");
       const webmBlob = new Blob(recordedChunksRef.current, {
         type: "video/webm",
       });
+      console.log(`WebM Blob created, size: ${webmBlob.size} bytes`);
 
-      console.log(`WebM Blob size: ${webmBlob.size} bytes`);
       if (webmBlob.size === 0) {
         throw new Error("Recorded WebM Blob is empty. No video was captured.");
       }
 
-      // Write WebM data to FFmpeg's virtual file system
+      // Log before writing WebM data to FFmpeg's virtual file system
       console.log("Writing WebM file to FFmpeg...");
       const webmData = await fetchFile(webmBlob);
       await ffmpeg.writeFile("input.webm", webmData);
+      console.log("WebM file written to FFmpeg virtual filesystem.");
 
-      // Transcode WebM to MP4 with multi-threading
+      // Log before transcoding
       console.log("Starting FFmpeg multi-threaded conversion to MP4...");
+      const startTime = Date.now(); // Track start time for performance
       await ffmpeg.exec([
         "-i",
-        "input.webm",
+        "input.webm", // Input file
         "-c:v",
-        "libx264",
+        "libx264", // Video codec
         "-crf",
-        "28",
+        "28", // Quality level
         "-preset",
-        "fast",
+        "fast", // Preset for faster conversion
         "-threads",
         "4", // Multi-threading enabled
-        "output.mp4",
+        "output.mp4", // Output file
       ]);
+      const conversionTime = Date.now() - startTime;
+      console.log(
+        `FFmpeg conversion completed in ${conversionTime / 1000} seconds.`
+      );
 
-      // Read the resulting MP4 file from FFmpeg's virtual file system
+      // Log before reading the resulting MP4 file
       console.log("Reading MP4 output from FFmpeg...");
       const mp4Data = ffmpeg.readFile("output.mp4");
 
-      console.log(`MP4 file size: ${mp4Data.length} bytes`);
       if (!mp4Data || mp4Data.length === 0) {
         throw new Error("MP4 file is empty. FFmpeg conversion failed.");
       }
+      console.log("MP4 file read successfully from FFmpeg virtual filesystem.");
 
       // Create MP4 Blob and download link
       const mp4Blob = new Blob([mp4Data.buffer], { type: "video/mp4" });
       const mp4Url = URL.createObjectURL(mp4Blob);
 
+      // Log before triggering download
+      console.log("MP4 Blob created, initiating download...");
       const aMp4 = document.createElement("a");
       aMp4.href = mp4Url;
       aMp4.download = "canvas-recording.mp4";
@@ -344,7 +356,7 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       aMp4.click();
       document.body.removeChild(aMp4);
 
-      console.log("MP4 downloaded successfully.");
+      console.log("MP4 download successfully triggered.");
     } catch (error) {
       console.error("Error during FFmpeg conversion:", error);
       alert("An error occurred during the conversion process.");
