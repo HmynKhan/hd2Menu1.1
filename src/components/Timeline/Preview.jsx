@@ -171,9 +171,114 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
 
   // Custom hook to manage media cycling end
 
+  // Update the handleDownload function to download recorded video start
+
+  const ffmpegRef = useRef(new FFmpeg());
+
+  const handleDownload = async () => {
+    const ffmpeg = ffmpegRef.current;
+  
+    if (!ffmpegLoaded) {
+      const baseURL = 'https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/esm';
+      try {
+        console.log("Loading FFmpeg multi-threaded version...");
+        // Load FFmpeg using provided URL
+        await ffmpeg.load({
+          coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+          wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+          workerURL: await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript'),
+        });
+        setFfmpegLoaded(true);
+        console.log("FFmpeg loaded successfully.");
+      } catch (error) {
+        console.error("Error loading FFmpeg:", error);
+        alert("Failed to load FFmpeg.");
+        return;
+      }
+    }
+  
+    // Check if any recorded chunks are available
+    if (recordedChunksRef.current.length === 0) {
+      alert("No recording available to download!");
+      return;
+    }
+  
+    try {
+      // Create WebM Blob from recorded chunks
+      console.log("Creating WebM Blob from recorded chunks...");
+      const webmBlob = new Blob(recordedChunksRef.current, { type: "video/webm" });
+      console.log(`WebM Blob created, size: ${webmBlob.size} bytes`);
+  
+      if (webmBlob.size === 0) {
+        throw new Error("Recorded WebM Blob is empty. No video was captured.");
+      }
+  
+      // Write WebM data to FFmpeg's virtual file system
+      console.log("Writing WebM file to FFmpeg...");
+      const webmData = await fetchFile(webmBlob);
+      await ffmpeg.writeFile('input.webm', webmData);
+  
+      // Transcode WebM to MP4
+      console.log("Starting FFmpeg transcode from WebM to MP4...");
+      await ffmpeg.exec(['-i', 'input.webm', 'output.mp4']);
+  
+      // Read the resulting MP4 file
+      const mp4Data = await ffmpeg.readFile('output.mp4');
+      console.log("MP4 file generated, size:", mp4Data.length);
+  
+      // Create MP4 Blob and download it
+      const mp4Blob = new Blob([mp4Data.buffer], { type: 'video/mp4' });
+      const mp4Url = URL.createObjectURL(mp4Blob);
+  
+      const aMp4 = document.createElement("a");
+      aMp4.href = mp4Url;
+      aMp4.download = "canvas-recording.mp4";
+      document.body.appendChild(aMp4);
+      aMp4.click();
+      document.body.removeChild(aMp4);
+  
+      console.log("MP4 download triggered successfully.");
+    } catch (error) {
+      console.error("Error during transcoding:", error);
+      alert("An error occurred during the conversion process.");
+    }
+  };
+  
+
+  // Update the handleDownload function to download recorded video end
+
+  // Use effect to start recording when component mounts start
   // Use effect to start recording when component mounts start
   useEffect(() => {
-    if (totalDuration === 0) return;
+    // Exit early if there's no duration or if FFmpeg is already loaded
+    if (totalDuration === 0 || ffmpegLoaded) return;
+
+    // Load FFmpeg core
+    const loadFFmpeg = async () => {
+      const baseURL = 'https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/esm';
+      const ffmpeg = ffmpegRef.current;
+      
+      // Set up log event
+      ffmpeg.on('log', ({ message }) => {
+        console.log(`[FFmpeg] ${message}`);
+      });
+
+      try {
+        // Load FFmpeg
+        await ffmpeg.load({
+          coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+          wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+          workerURL: await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript'),
+        });
+        setFfmpegLoaded(true); // Mark FFmpeg as loaded
+        console.log("FFmpeg loaded successfully.");
+      } catch (error) {
+        console.error("Error loading FFmpeg:", error);
+      }
+    };
+
+    // Call the FFmpeg loader
+    loadFFmpeg();
 
     // Reset progress to 0 before starting
     setProgress(0);
@@ -207,7 +312,6 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       mediaRecorder.stop();
     }, recordingDuration);
 
-    // console.log("totalDuration in recording useffect : ", totalDuration);
     // Progress bar logic
     const intervalId = setInterval(() => {
       const elapsedTime = (Date.now() - startTime) / 1000; // Convert to seconds
@@ -217,8 +321,6 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       );
       setProgress(progressPercentage);
 
-      // console.log("intervalId in useffect recording : ", intervalId);
-      // console.log("progressPercentage in liast effect : ", progressPercentage);
       if (progressPercentage >= 100) {
         clearInterval(intervalId);
       }
@@ -228,149 +330,15 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       clearInterval(intervalId);
       mediaRecorder.stop(); // Stop recording on component unmount
     };
-  }, [totalDuration]);
+
+  }, [totalDuration, ffmpegLoaded]);
+
+
   // Use effect to start recording when component mounts end
 
-  // Update the handleDownload function to download recorded video start
 
-  const ffmpegRef = useRef(new FFmpeg());
-
-  const handleDownload = async () => {
-    const ffmpeg = ffmpegRef.current;
-
-    console.log("Starting download process...");
-
-    // Check if FFmpeg is already loaded, otherwise load it
-    if (!ffmpegLoaded) {
-      const baseURL = "https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/esm";
-      console.log("Loading FFmpeg (multi-threaded)...");
-
-      const retryLoadFFmpeg = async (retries, delay) => {
-        for (let i = 0; i < retries; i++) {
-          try {
-            ffmpeg.on("log", ({ message }) => {
-              console.log(`[FFmpeg] ${message}`); // Log FFmpeg messages in real-time
-            });
-
-            // Load FFmpeg with multi-threaded core
-            console.log("Attempting to load FFmpeg...");
-            await ffmpeg.load({
-              coreURL: await toBlobURL(
-                `${baseURL}/ffmpeg-core.js`,
-                "text/javascript"
-              ),
-              wasmURL: await toBlobURL(
-                `${baseURL}/ffmpeg-core.wasm`,
-                "application/wasm"
-              ),
-              workerURL: await toBlobURL(
-                `${baseURL}/ffmpeg-core.worker.js`,
-                "text/javascript"
-              ),
-            });
-
-            setFfmpegLoaded(true);
-            console.log("FFmpeg loaded successfully.");
-            return;
-          } catch (error) {
-            console.error(`FFmpeg load attempt ${i + 1} failed:`, error);
-            if (i < retries - 1) {
-              await new Promise((resolve) => setTimeout(resolve, delay));
-            }
-          }
-        }
-        alert("Failed to load FFmpeg after several attempts.");
-        return;
-      };
-
-      console.log("before ffmpeg await 35");
-      await retryLoadFFmpeg(3, 5000);
-      // if (ffmpegLoaded) {
-      //   return;
-      // }
-      console.log("after ffmpeg await 35");
-    }
-
-    // Check if any recorded chunks are available
-    if (recordedChunksRef.current.length === 0) {
-      alert("No recording available to download!");
-      return;
-    }
-
-    console.log("after record chunks");
-    try {
-      // Log before creating WebM Blob
-      console.log("Creating WebM Blob from recorded chunks...");
-      const webmBlob = new Blob(recordedChunksRef.current, {
-        type: "video/webm",
-      });
-      console.log(`WebM Blob created, size: ${webmBlob.size} bytes`);
-
-      if (webmBlob.size === 0) {
-        throw new Error("Recorded WebM Blob is empty. No video was captured.");
-      }
-
-      // Log before writing WebM data to FFmpeg's virtual file system
-      console.log("Writing WebM file to FFmpeg...");
-      const webmData = await fetchFile(webmBlob);
-      await ffmpeg.writeFile("input.webm", webmData);
-      console.log("WebM file written to FFmpeg virtual filesystem.");
-
-      // Log before transcoding
-      console.log("Starting FFmpeg multi-threaded conversion to MP4...");
-      const startTime = Date.now(); // Track start time for performance
-      await ffmpeg.exec([
-        "-i",
-        "input.webm", // Input file
-        "-c:v",
-        "libx264", // Video codec
-        "-crf",
-        "28", // Quality level
-        "-preset",
-        "fast", // Preset for faster conversion
-        "-threads",
-        "4", // Multi-threading enabled
-        "output.mp4", // Output file
-      ]);
-      const conversionTime = Date.now() - startTime;
-      console.log(
-        `FFmpeg conversion completed in ${conversionTime / 1000} seconds.`
-      );
-
-      // Log before reading the resulting MP4 file
-      console.log("Reading MP4 output from FFmpeg...");
-      const mp4Data = ffmpeg.readFile("output.mp4");
-
-      if (!mp4Data || mp4Data.length === 0) {
-        throw new Error("MP4 file is empty. FFmpeg conversion failed.");
-      }
-      console.log("MP4 file read successfully from FFmpeg virtual filesystem.");
-
-      // Create MP4 Blob and download link
-      const mp4Blob = new Blob([mp4Data.buffer], { type: "video/mp4" });
-      const mp4Url = URL.createObjectURL(mp4Blob);
-
-      // Log before triggering download
-      console.log("MP4 Blob created, initiating download...");
-      const aMp4 = document.createElement("a");
-      aMp4.href = mp4Url;
-      aMp4.download = "canvas-recording.mp4";
-      document.body.appendChild(aMp4);
-      aMp4.click();
-      document.body.removeChild(aMp4);
-
-      console.log("MP4 download successfully triggered.");
-    } catch (error) {
-      console.error("Error during FFmpeg conversion:", error);
-      alert("An error occurred during the conversion process.");
-    }
-  };
-
-  // Update the handleDownload function to download recorded video end
 
   // to render video in canva start
-
-  // Comment out FFmpeg conversion temporarily for testing WebM download
 
   const useVideoElement = (videoSrc, layerRef) => {
     const videoRef = useRef(null);
