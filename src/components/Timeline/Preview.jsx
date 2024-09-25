@@ -3,7 +3,6 @@ import { Stage, Rect, Layer, Image } from "react-konva";
 import useImage from "use-image";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
-// import kbk from "../../assets/";
 
 const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
   const layoutWidth = 400;
@@ -11,10 +10,17 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
   const layoutRef = useRef(null);
   const layerRef = useRef(null);
 
-  const [ffmpegLoaded, setFfmpegLoaded] = useState(false); // Add this line
+  // in division pause media looping
+  const [shouldStopCycling, setShouldStopCycling] = useState(false);
+
+  const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
 
   // Store recorded chunks in a ref to be accessed later
   const recordedChunksRef = useRef([]);
+
+  const calculateDivisionDuration = (mediaItems) => {
+    return mediaItems.reduce((total, item) => total + item.appearanceTime, 0);
+  };
 
   // Function to calculate the total duration of the layout based on the longest division start
   const calculateTotalDuration = () => {
@@ -56,9 +62,10 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       );
       setProgress(progressPercentage);
 
-      // Stop the interval once progress reaches 100%
+      // Stop media cycling and video when progress reaches 100%
       if (progressPercentage >= 100) {
         clearInterval(intervalId);
+        setShouldStopCycling(true); // Stop cycling
       }
     }, 100);
 
@@ -66,22 +73,34 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
   }, [startTime, totalDuration]);
 
   // Custom hook to manage media cycling start
-  const useMediaCycler = (mediaItems, layerRef) => {
+
+  const useMediaCycler = (
+    mediaItems,
+    layerRef,
+    divisionShouldStopCycling, // Make this specific for each division
+    divisionTotalDuration
+  ) => {
     const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
     const [mediaStartTime, setMediaStartTime] = useState(Date.now());
     const [isCycling, setIsCycling] = useState(true);
 
     const currentMedia = mediaItems[currentMediaIndex];
     const videoElement = useVideoElement(
-      currentMedia?.mediaType === "video" ? currentMedia.mediaSrc : null, // Correctly identify mediaType for video
-      layerRef // Pass the layerRef for canvas update
+      currentMedia?.mediaType === "video" ? currentMedia.mediaSrc : null,
+      layerRef
     );
 
     useEffect(() => {
-      // console.log("currentMedia in useMediaCycler:", currentMedia); // Log current media
+      if (
+        mediaItems.length === 0 ||
+        !layerRef.current ||
+        divisionShouldStopCycling
+      ) {
+        setIsCycling(false); // Stop cycling when this specific division should stop
+        return;
+      }
 
-      if (mediaItems.length === 0 || !layerRef.current) return;
-      const mediaDuration = currentMedia?.appearanceTime * 1000 || 0;
+      const mediaDuration = currentMedia?.appearanceTime * 1000 || 3000;
 
       if (
         currentMedia?.mediaType === "video" &&
@@ -94,14 +113,22 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
         anim.start();
       }
 
+      const startTime = Date.now();
       const intervalId = setInterval(() => {
-        const elapsedTime = Date.now() - mediaStartTime;
-        if (elapsedTime >= mediaDuration) {
+        const elapsedTime = (Date.now() - startTime) / 1000;
+
+        if (elapsedTime >= divisionTotalDuration) {
+          setIsCycling(false);
+          clearInterval(intervalId);
+          return;
+        }
+
+        const mediaElapsedTime = Date.now() - mediaStartTime;
+        if (mediaElapsedTime >= mediaDuration) {
           setCurrentMediaIndex((prevIndex) => {
             const nextIndex = (prevIndex + 1) % mediaItems.length;
             setMediaStartTime(Date.now());
 
-            // Pause current video
             if (
               currentMedia?.mediaType === "video" &&
               videoElement instanceof HTMLVideoElement
@@ -110,7 +137,6 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
               videoElement.currentTime = 0;
             }
 
-            // Play the next video if the next media is a video
             if (
               mediaItems[nextIndex]?.mediaType === "video" &&
               videoElement instanceof HTMLVideoElement
@@ -125,7 +151,6 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
 
       return () => {
         clearInterval(intervalId);
-        // Pause the video only if videoElement is a valid HTMLVideoElement
         if (videoElement instanceof HTMLVideoElement) {
           videoElement.pause();
         }
@@ -137,10 +162,13 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       videoElement,
       currentMedia,
       layerRef,
+      divisionShouldStopCycling, // Use this for the specific division
+      divisionTotalDuration,
     ]);
 
     return { currentMediaIndex, isCycling, videoElement };
   };
+
   // Custom hook to manage media cycling end
 
   // Use effect to start recording when component mounts start
@@ -414,20 +442,36 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
 
               {layout?.divisions?.map((d, index) => {
                 const mediaItems = divisionsMedia[index] || [];
+                const divisionTotalDuration =
+                  calculateDivisionDuration(mediaItems);
 
-                // Log to ensure media items are correct
-                {
-                  /* console.log("divisionsMedia[index]:", divisionsMedia[index]); */
-                }
+                const [
+                  divisionShouldStopCycling,
+                  setDivisionShouldStopCycling,
+                ] = useState(false);
+
+                useEffect(() => {
+                  const divisionInterval = setInterval(() => {
+                    const elapsedDivisionTime = (Date.now() - startTime) / 1000;
+
+                    if (elapsedDivisionTime >= divisionTotalDuration) {
+                      setDivisionShouldStopCycling(true);
+                      clearInterval(divisionInterval);
+                    }
+                  }, 100);
+
+                  return () => clearInterval(divisionInterval);
+                }, [startTime, divisionTotalDuration]);
 
                 const { currentMediaIndex, isCycling, videoElement } =
-                  useMediaCycler(mediaItems, layerRef);
+                  useMediaCycler(
+                    mediaItems,
+                    layerRef,
+                    divisionShouldStopCycling, // Pass division-specific stop flag
+                    divisionTotalDuration
+                  );
 
                 const currentMedia = mediaItems[currentMediaIndex];
-                {
-                  /* console.log("currentMedia:", currentMedia); // Log current media */
-                }
-
                 const [image] = useImage(currentMedia?.mediaSrc, "anonymous");
 
                 return (
@@ -438,7 +482,7 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
                           currentMedia?.mediaType === "video"
                             ? videoElement
                             : image
-                        } // Use videoElement if it's a video, otherwise use image
+                        }
                         crossOrigin="anonymous"
                         x={d?.x}
                         y={d?.y}
