@@ -1,4 +1,4 @@
-import React from "react";
+// import React from "react";
 
 const PopUpMessage = ({ message, type }) => {
   const bgColor = type === "error" ? "bg-red-500" : "bg-green-500";

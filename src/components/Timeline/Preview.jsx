@@ -283,10 +283,12 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
         return;
       };
 
+      console.log("before ffmpeg await 35");
       await retryLoadFFmpeg(3, 5000);
-      if (!ffmpegLoaded) {
-        return;
-      }
+      // if (ffmpegLoaded) {
+      //   return;
+      // }
+      console.log("after ffmpeg await 35");
     }
 
     // Check if any recorded chunks are available
@@ -295,6 +297,7 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       return;
     }
 
+    console.log("after record chunks");
     try {
       // Log before creating WebM Blob
       console.log("Creating WebM Blob from recorded chunks...");
