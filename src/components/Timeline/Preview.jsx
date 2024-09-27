@@ -7,19 +7,40 @@ import { AiOutlineClose } from "react-icons/ai";
 import { RiVideoDownloadFill } from "react-icons/ri";
 
 const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
-  const layoutWidth = 400;
-  const layoutHeight = 300;
+  const resolutionMap = {
+    hd: { width: 1280, height: 720 },
+    fullhd: { width: 1920, height: 1080 },
+    fourk: { width: 3840, height: 2160 },
+  };
+
+  // const layoutWidth = 400;
+  // const layoutHeight = 300;
+
+  const selectedResolution = layout.resolution || "fullhd"; // Default to full HD
+  const { width: layoutWidth, height: layoutHeight } =
+    resolutionMap[selectedResolution];
+
+  console.log("Selected Resolution:", selectedResolution);
+  console.log(
+    "Resolution Dimensions - Width:",
+    layoutWidth,
+    "Height:",
+    layoutHeight
+  );
+
   const layoutRef = useRef(null);
   const layerRef = useRef(null);
 
   // in division pause media looping
   const [shouldStopCycling, setShouldStopCycling] = useState(false);
-
   const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
 
   // Store recorded chunks in a ref to be accessed later
   const recordedChunksRef = useRef([]);
 
+  // video resolution code start
+
+  // video resolution code end
   const calculateDivisionDuration = (mediaItems) => {
     return mediaItems.reduce((total, item) => total + item.appearanceTime, 0);
   };
@@ -220,9 +241,18 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       const webmData = await fetchFile(webmBlob);
       await ffmpeg.writeFile("input.webm", webmData);
 
-      // Transcode WebM to MP4
+      // Transcode WebM to MP4 using the selected resolution
       console.log("Starting FFmpeg transcode from WebM to MP4...");
-      await ffmpeg.exec(["-i", "input.webm", "output.mp4"]);
+      await ffmpeg.exec([
+        "-i",
+        "input.webm",
+        "-vf",
+        // "-crf",
+        "28",
+        `scale=${layoutWidth}:${layoutHeight}`, // Set resolution dynamically
+        // `scale=${layoutWidth / 2}:${layoutHeight / 2}`, // for 4k video
+        "output.mp4",
+      ]);
 
       // Read the resulting MP4 file
       const mp4Data = await ffmpeg.readFile("output.mp4");
@@ -295,6 +325,32 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       const canvas = layoutRef.current.querySelector("canvas");
       if (!canvas) return;
 
+      // Get browser capabilities start
+      const videoCapabilities =
+        navigator.mediaDevices.getSupportedConstraints();
+
+      if (
+        layoutWidth >= 3840 &&
+        layoutHeight >= 2160 &&
+        videoCapabilities.width &&
+        videoCapabilities.height
+      ) {
+        // Check if browser supports 4K
+        if (
+          !videoCapabilities.width.max ||
+          !videoCapabilities.height.max ||
+          videoCapabilities.width.max < 3840 ||
+          videoCapabilities.height.max < 2160
+        ) {
+          alert(
+            "Your browser does not support recording video at 4K resolution."
+          );
+          return;
+        }
+      }
+
+      // Get browser capabilities end
+
       const ctx = canvas.getContext("2d");
 
       // Set background color to white
@@ -317,7 +373,7 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
 
       // Stop recording after the total duration of all divisions + buffer
       const recordingDuration = totalDuration * 1000; // Convert to milliseconds
-      const bufferDuration = 120; // 1 second buffer
+      const bufferDuration = 100; // 1 second buffer
 
       setTimeout(() => {
         mediaRecorder.stop();
@@ -395,9 +451,25 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
   };
   // to render video in canva end
 
+  const scaleX = layoutWidth / 400; // Calculate scaling factor for width
+  const scaleY = layoutHeight / 300; // Calculate scaling factor for height
+  const extraPadding = 100; // Add padding to fit the icons/buttons
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-      <div className="bg-white p-5 w-[500px] h-[450px] rounded">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
+      style={{
+        width: layoutWidth + extraPadding + "px",
+        height: layoutHeight + extraPadding + "px",
+      }}
+    >
+      <div
+        className="bg-white p-5  rounded"
+        style={{
+          width: layoutWidth + extraPadding + "px",
+          height: layoutHeight + extraPadding + "px",
+        }}
+      >
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold">Preview layout: {layout.name}</h1>
           <button
@@ -473,10 +545,10 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
                             : image
                         }
                         crossOrigin="anonymous"
-                        x={d?.x}
-                        y={d?.y}
-                        width={d?.width}
-                        height={d?.height}
+                        x={d?.x * scaleX}
+                        y={d?.y * scaleY}
+                        width={d?.width * scaleX}
+                        height={d?.height * scaleY}
                       />
                     )}
                   </React.Fragment>
@@ -498,13 +570,13 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
           </div>
         </div>
 
-        {/* Download button */}
         <button
           className="px-2 py-1 bg-blue-500 hover:bg-blue-700 text-white cursor-pointer rounded mb-2"
           onClick={handleDownload}
         >
           <RiVideoDownloadFill className="text-2xl" />
         </button>
+        {/* Download button */}
         {/* <button
           className="px-2 py-1 bg-green-500 hover:bg-green-700 text-white cursor-pointer rounded"
           onClick={handleDownloadMP4}

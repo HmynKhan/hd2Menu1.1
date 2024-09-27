@@ -207,12 +207,18 @@ const CustomLayout = ({ onSaveLayout }) => {
           <label className="font-semibold mr-2">Device Resolution: </label>
           <select
             value={resolution}
-            onChange={(e) => setResolution(e.target.value)}
+            onChange={(e) => {
+              setResolution(e.target.value);
+              console.log(
+                "Selected Resolution in CustomLayout:",
+                e.target.value
+              ); // Log the selected resolution
+            }}
             className="border rounded px-2 py-1"
           >
             <option value="hd">HD 720P</option>
             <option value="fullhd">Full HD 1080P</option>
-            <option value="4k">4k Ultra HD</option>
+            <option value="fourk">4k Ultra HD</option>
           </select>
         </div>
 
