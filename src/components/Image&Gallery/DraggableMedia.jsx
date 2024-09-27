@@ -1,4 +1,4 @@
-import React from "react";
+// import React from "react";
 
 const DraggableMedia = ({ id, src, type, onSelect }) => {
   const handleDragStart = (e) => {
@@ -24,9 +24,9 @@ const DraggableMedia = ({ id, src, type, onSelect }) => {
         <video
           src={src}
           className="w-[60px] h-[40px] object-cover"
-          autoPlay
+          // autoPlay
           muted
-          loop
+          // loop
         />
       )}
     </div>

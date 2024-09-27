@@ -244,7 +244,7 @@ const CustomLayout = ({ onSaveLayout }) => {
         {/* Layout */}
         <div className="flex items-center justify-center mb-2">
           <div
-            className="border border-black"
+            className="border-2 border-black"
             ref={layoutRef}
             style={{
               width: `${stageWidth}px`,
