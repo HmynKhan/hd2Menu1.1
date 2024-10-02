@@ -79,17 +79,16 @@ const CustomLayout = ({ onSaveLayout }) => {
       })),
     };
 
+    // Call the parent onSaveLayout function to save in SaveLayout
     onSaveLayout(savedLayout);
 
-    console.log("Layout saved:", savedLayout);
+    // Reset state after saving
     setMessage({ text: "Layout saved successfully!", type: "success" });
-
-    // Reset layout details
     setLayoutName("");
     setDivisions([]);
     setSelectedDivisionIndex(null);
     setDivisionDetails({ x: "", y: "", width: "", height: "" });
-    setResolution("fullhd");
+    setResolution("hd");
   };
 
   const handleDragMove = (index, event) => {
@@ -195,8 +194,8 @@ const CustomLayout = ({ onSaveLayout }) => {
   };
 
   return (
-    <div className="p-2">
-      <div className="border-2 border-gray-200 p-2 rounded">
+    <div className="p-2 ">
+      <div className=" p-2 rounded">
         {/* Header */}
         <h1 className="text-2xl font-bold mb-4 text-center">
           Create Custom Layout

@@ -1,10 +1,19 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Stage, Rect, Layer, Image } from "react-konva";
 import useImage from "use-image";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
 import { AiOutlineClose } from "react-icons/ai";
 import { RiVideoDownloadFill } from "react-icons/ri";
+import { FaPlayCircle } from "react-icons/fa";
+
+// 860762
+// Utility function to convert seconds to MM:SS format
+const formatTime = (seconds) => {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  return `${minutes}:${remainingSeconds < 10 ? "0" : ""}${remainingSeconds}`;
+};
 
 const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
   const resolutionMap = {
@@ -13,21 +22,19 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
     fourk: { width: 3840, height: 2160 },
   };
 
-  // const layoutWidth = 400;
-  // const layoutHeight = 300;
-
   const selectedResolution = layout.resolution || "fullhd"; // Default to full HD
   const { width: layoutWidth, height: layoutHeight } =
     resolutionMap[selectedResolution];
 
-  console.log("Selected Resolution:", selectedResolution);
-  console.log(
-    "Resolution Dimensions - Width:",
-    layoutWidth,
-    "Height:",
-    layoutHeight
-  );
+  // play layout again code start
+  const handlePlay = () => {
+    setStartTime(Date.now()); // Reset the timer
+    setProgress(0); // Reset the progress bar
+    setShouldStopCycling(false); // Reset cycling globally
+    setTimeout(() => setShouldStopCycling(true), totalDuration * 1000); // Automatically stop cycling when progress bar reaches 100%
+  };
 
+  // play layout again code end
   const layoutRef = useRef(null);
   const layerRef = useRef(null);
 
@@ -117,18 +124,21 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
     );
 
     useEffect(() => {
+      // Stop cycling if global or division-specific cycling should stop
       if (
         mediaItems.length === 0 ||
         !layerRef.current ||
-        divisionShouldStopCycling
+        divisionShouldStopCycling ||
+        shouldStopCycling
       ) {
         setIsCycling(false);
         return;
       }
 
-      // Adjust media duration based on its own appearance time
+      // Get the appearance time (duration) of the current media, or default to 3000ms if undefined
       const mediaDuration = currentMedia?.appearanceTime * 1000 || 3000;
 
+      // Play video if the media is of type 'video'
       if (
         currentMedia?.mediaType === "video" &&
         videoElement instanceof HTMLVideoElement
@@ -140,30 +150,27 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
         anim.start();
       }
 
-      const mediaChangeInterval = setInterval(() => {
-        const mediaElapsedTime = Date.now() - mediaStartTime;
+      // Set a timeout for switching to the next media item after the appearance time
+      const mediaChangeTimeout = setTimeout(() => {
+        setCurrentMediaIndex((prevIndex) => {
+          const nextIndex = (prevIndex + 1) % mediaItems.length; // Loop through media items
+          setMediaStartTime(Date.now()); // Reset media start time
 
-        // Move to next media if current one has finished its own duration
-        if (mediaElapsedTime >= mediaDuration) {
-          setCurrentMediaIndex((prevIndex) => {
-            const nextIndex = (prevIndex + 1) % mediaItems.length;
-            setMediaStartTime(Date.now()); // Reset media start time
+          // Reset and pause video if it's a video type media
+          if (
+            currentMedia?.mediaType === "video" &&
+            videoElement instanceof HTMLVideoElement
+          ) {
+            videoElement.pause();
+            videoElement.currentTime = 0; // Reset video to the beginning
+          }
 
-            if (
-              currentMedia?.mediaType === "video" &&
-              videoElement instanceof HTMLVideoElement
-            ) {
-              videoElement.pause();
-              videoElement.currentTime = 0; // Reset video to beginning
-            }
-
-            return nextIndex;
-          });
-        }
-      }, 100);
+          return nextIndex;
+        });
+      }, mediaDuration); // <-- This ensures each media respects its `appearanceTime`
 
       return () => {
-        clearInterval(mediaChangeInterval);
+        clearTimeout(mediaChangeTimeout);
         if (videoElement instanceof HTMLVideoElement) {
           videoElement.pause();
         }
@@ -176,6 +183,7 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       currentMedia,
       layerRef,
       divisionShouldStopCycling,
+      shouldStopCycling,
     ]);
 
     return { currentMediaIndex, isCycling, videoElement };
@@ -239,20 +247,48 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       // Write WebM data to FFmpeg's virtual file system
       console.log("Writing WebM file to FFmpeg...");
       const webmData = await fetchFile(webmBlob);
+      // const webmData = await fetchFile(
+      //   "https://raw.githubusercontent.com/ffmpegwasm/testdata/master/Big_Buck_Bunny_180_10s.webm"
+      // );
+
       await ffmpeg.writeFile("input.webm", webmData);
 
       // Transcode WebM to MP4 using the selected resolution
       console.log("Starting FFmpeg transcode from WebM to MP4...");
+      // await ffmpeg.exec([
+      //   "-i",
+      //   "input.webm",
+      //   "-vf",
+      //   `scale=${layoutWidth}:${layoutHeight}`,
+      //   // ,format=yuv420p`, // Ensure scaling and color format are handled correctly
+      //   "-c:v",
+      //   "libx264", // Better codec for MP4 encoding
+      //   "-crf",
+      //   "23", // Quality factor (lower = better quality)
+      //   "-preset",
+      //   "fast", // Faster encoding for testing
+      //   "output.mp4",
+      // ]);
+
       await ffmpeg.exec([
         "-i",
         "input.webm",
         "-vf",
-        // "-crf",
-        "28",
-        `scale=${layoutWidth}:${layoutHeight}`, // Set resolution dynamically
-        // `scale=${layoutWidth / 2}:${layoutHeight / 2}`, // for 4k video
+        `scale=${layoutWidth}:${layoutHeight}`,
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p", // Ensure YUV color format
+        "-crf",
+        "23",
+        "-preset",
+        "fast",
+        "-movflags",
+        "faststart",
         "output.mp4",
       ]);
+
+      //  `scale=${layoutWidth}:${layoutHeight}`, // Scaling based on layout dimensions
 
       // Read the resulting MP4 file
       const mp4Data = await ffmpeg.readFile("output.mp4");
@@ -270,6 +306,8 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       document.body.removeChild(aMp4);
 
       console.log("MP4 download triggered successfully.");
+
+      ffmpeg.exit(); // Free up memory by unloading FFmpeg
     } catch (error) {
       console.error("Error during transcoding:", error);
       alert("An error occurred during the conversion process.");
@@ -281,7 +319,7 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
   // Update the handleDownload function to download recorded video end
 
   // Use effect to start recording when component mounts start
-
+  // for high memory usage
   useEffect(() => {
     if (!ffmpegLoaded) {
       const loadFFmpeg = async () => {
@@ -373,7 +411,7 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
 
       // Stop recording after the total duration of all divisions + buffer
       const recordingDuration = totalDuration * 1000; // Convert to milliseconds
-      const bufferDuration = 100; // 1 second buffer
+      const bufferDuration = 250; // 1 second buffer
 
       setTimeout(() => {
         mediaRecorder.stop();
@@ -442,7 +480,8 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
 
       return () => {
         if (videoRef.current) {
-          videoRef.current.pause(); // Stop the video when component is unmounted
+          videoRef.current.pause(); // Stop video playback
+          videoRef.current.src = ""; // Remove the video source
         }
       };
     }, [videoSrc]);
@@ -451,16 +490,38 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
   };
   // to render video in canva end
 
+  // for heavy memory usage
   const scaleX = layoutWidth / 400; // Calculate scaling factor for width
   const scaleY = layoutHeight / 300; // Calculate scaling factor for height
-  const extraPadding = 100; // Add padding to fit the icons/buttons
+  const extraPadding = 130; // Add padding to fit the icons/buttons
+
+  // i want to apply zoom in and out for resolution 720
+
+  useEffect(() => {
+    // Check if the resolution is 720p and apply the zoom level accordingly
+    if (selectedResolution === "hd") {
+      document.body.style.zoom = "67%"; // Set zoom to 67% when previewing 720p
+    } else if (selectedResolution === "fullhd") {
+      document.body.style.zoom = "45%"; // Set zoom to 67% when previewing 720p
+    } else if (selectedResolution === "fourk") {
+      document.body.style.zoom = "22%"; // Set zoom to 67% when previewing 720p
+    }
+
+    // Clean up function to reset the zoom when the component is unmounted
+    return () => {
+      document.body.style.zoom = "100%"; // Reset zoom to 100% on popup close
+    };
+  }, [selectedResolution]); // Run this effect when the resolution changes
 
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
       style={{
-        width: layoutWidth + extraPadding + "px",
-        height: layoutHeight + extraPadding + "px",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center", // Vertically center
+        width: "100%", // Take full width of the screen
+        height: "100%", // Take full height of the screen
       }}
     >
       <div
@@ -468,16 +529,50 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
         style={{
           width: layoutWidth + extraPadding + "px",
           height: layoutHeight + extraPadding + "px",
+          backgroundColor: "#F3E5AB",
         }}
+        // style={{ paddingBottom: "20px", backgroundColor: "skyblue" }}
       >
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold">Preview layout: {layout.name}</h1>
-          <button
-            onClick={onClose}
-            className="bg-red-500 px-3 py-1 hover:bg-red-600 cursor-pointer rounded-md text-white"
+          <h1
+            className="text-2xl font-bold"
+            style={{
+              position: "relative", // Absolute positioning relative to the pop-up container
+              top: "10px", // Adjust distance from the top
+              left: "45px", // Adjust distance from the left
+              margin: 0, // Remove any default margin
+            }}
           >
-            <AiOutlineClose />
-          </button>
+            Preview layout: {layout.name}
+          </h1>
+
+          <div
+            className="ml-auto flex items-center space-x-2"
+            style={{ marginRight: "43px" }}
+          >
+            <button
+              className="w-15 h-15 bg-green-500 px-4 py-2 hover:bg-green-600 text-white cursor-pointer rounded"
+              onClick={handlePlay}
+            >
+              <FaPlayCircle className="text-3xl" />
+            </button>
+            <button
+              className="w-15 h-15 px-4 py-2 bg-blue-500 hover:bg-blue-700 text-white cursor-pointer rounded"
+              onClick={handleDownload}
+            >
+              <RiVideoDownloadFill className="text-3xl" />
+            </button>
+
+            <button
+              onClick={() => {
+                document.body.style.zoom = "100%"; // Reset zoom to 100% on close
+                onClose(); // Call the existing onClose prop function to handle the rest of the closing logic
+              }}
+              className="w-15 h-15 bg-red-500 px-4 py-2 hover:bg-red-600 cursor-pointer rounded-md text-white"
+            >
+              <AiOutlineClose className="text-3xl" />
+            </button>
+          </div>
         </div>
 
         <div
@@ -503,19 +598,29 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
                 const divisionTotalDuration =
                   calculateDivisionDuration(mediaItems);
 
-                const [
-                  divisionShouldStopCycling,
-                  setDivisionShouldStopCycling,
-                ] = useState(false);
+                const [isCycling, setIsCycling] = useState(true); // Start with cycling
+                {
+                  /* console.log(`Cycling state for division ${index}:`, isCycling); // Debugging */
+                }
+
+                // Ensure cycling resets when Play button is pressed
+                useEffect(() => {
+                  // Reset cycling when Play is triggered
+                  setIsCycling(true);
+
+                  // Stop cycling either when total progress finishes or individual division media finishes
+                  if (shouldStopCycling) {
+                    setIsCycling(false);
+                  }
+                }, [shouldStopCycling, startTime]); // Trigger this effect when Play is clicked or global cycling should stop
 
                 useEffect(() => {
-                  const divisionStartTime = Date.now(); // Independent start time for each division
+                  const divisionStartTime = Date.now();
                   const divisionInterval = setInterval(() => {
                     const elapsedDivisionTime =
                       (Date.now() - divisionStartTime) / 1000;
-
                     if (elapsedDivisionTime >= divisionTotalDuration) {
-                      setDivisionShouldStopCycling(true);
+                      setIsCycling(false); // Stop cycling after duration ends
                       clearInterval(divisionInterval);
                     }
                   }, 100);
@@ -523,13 +628,12 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
                   return () => clearInterval(divisionInterval);
                 }, [divisionTotalDuration]);
 
-                const { currentMediaIndex, isCycling, videoElement } =
-                  useMediaCycler(
-                    mediaItems,
-                    layerRef,
-                    divisionShouldStopCycling,
-                    divisionTotalDuration
-                  );
+                const { currentMediaIndex, videoElement } = useMediaCycler(
+                  mediaItems,
+                  layerRef,
+                  !isCycling, // Pass this to handle cycling
+                  divisionTotalDuration
+                );
 
                 const currentMedia = mediaItems[currentMediaIndex];
                 const [image] = useImage(currentMedia?.mediaSrc, "anonymous");
@@ -558,31 +662,23 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
           </Stage>
 
           {/* Progress bar */}
-          <div
-            className="bg-gray-300 h-2 rounded mb-4"
-            style={{ width: "88%" }}
-          >
-            <div
-              className="bg-green-500 h-full rounded"
-              style={{ width: `${progress}%` }}
-            ></div>
-            <p className="text-center text-xs">{Math.round(progress)}%</p>
+          <div className="relative w-full mb-4 flex justify-center items-center">
+            <div className="bg-gray-300 h-2 rounded" style={{ width: "85%" }}>
+              <div
+                className="bg-green-500 h-full rounded"
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
+            {/* Display current time / total duration at the end */}
+            <span
+              className="text-base ml-2 text-center font-extrabold"
+              style={{ whiteSpace: "nowrap" }}
+            >
+              {formatTime((progress / 100) * totalDuration)} /{" "}
+              {formatTime(totalDuration)}
+            </span>
           </div>
         </div>
-
-        <button
-          className="px-2 py-1 bg-blue-500 hover:bg-blue-700 text-white cursor-pointer rounded mb-2"
-          onClick={handleDownload}
-        >
-          <RiVideoDownloadFill className="text-2xl" />
-        </button>
-        {/* Download button */}
-        {/* <button
-          className="px-2 py-1 bg-green-500 hover:bg-green-700 text-white cursor-pointer rounded"
-          onClick={handleDownloadMP4}
-        >
-          {loading ? "Loading..." : "Download as MP4"}
-        </button> */}
       </div>
     </div>
   );

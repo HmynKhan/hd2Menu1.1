@@ -1,3 +1,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* 
+import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@100..700&family=Nerko+One&family=Righteous&family=Ubuntu&display=swap'); */
+
+body {
+  font-family: "Ubuntu", system-ui, sans-serif;
+  font-weight: 400; /* or your desired weight */
+  font-style: normal;
+  background-color: #f7f8fa;
+}
+

@@ -144,8 +144,9 @@ const Timeline = ({ layout, onCancle }) => {
   };
 
   const handleCancle = () => {
-    setDivisionsMedia({});
-    onCancle();
+    setDivisionsMedia({}); // Reset media divisions
+    setShowPreview(false); // Hide the Preview
+    onCancle(); // Propagate cancel action
   };
 
   const handleClickOutside = (event) => {
