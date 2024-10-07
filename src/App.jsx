@@ -8,10 +8,8 @@ import VideoForm from "./components/VideoForm/VideoForm";
 const App = () => {
   const [layouts, setLayouts] = useState([]);
   const [currentLayout, setCurrentLayout] = useState(null);
-  console.log(currentLayout, "currentLayout");
   const [currentLayoutIndex, setCurrentLayoutIndex] = useState(null);
 
-  // console.log("layout in app.jsx : ", layouts);
   // Load layouts from localStorage on initial render
   useEffect(() => {
     const storedLayouts = JSON.parse(localStorage.getItem("layouts")) || [];
@@ -44,9 +42,37 @@ const App = () => {
   // Load a layout by setting it as the current layout
   const loadLayout = (layoutIndex) => {
     const selectedLayout = layouts[layoutIndex];
-    setCurrentLayout(selectedLayout);
+
+    // Adjust the current layout based on orientation
+    const stageDimensions =
+      selectedLayout.orientation === "vertical"
+        ? {
+            width: selectedLayout.stageDimensions.height,
+            height: selectedLayout.stageDimensions.width,
+          }
+        : selectedLayout.stageDimensions;
+
+    // **This is where the divisions' x, y, width, height should be swapped based on the orientation**
+    const adjustedDivisions = selectedLayout.divisions.map((division) => {
+      if (selectedLayout.orientation === "vertical") {
+        return {
+          x: division.y, // Swap x and y for vertical
+          y: division.x,
+          width: division.height, // Swap width and height for vertical
+          height: division.width,
+        };
+      } else {
+        return division; // Keep as is for horizontal
+      }
+    });
+
+    setCurrentLayout({
+      ...selectedLayout,
+      stageDimensions, // Apply correct dimensions based on orientation
+      divisions: adjustedDivisions, // Apply correct division coordinates based on orientation
+    });
+
     setCurrentLayoutIndex(layoutIndex);
-    // console.log("selectedLayout in app.jsx : ", selectedLayout);
   };
 
   return (

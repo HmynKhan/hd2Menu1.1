@@ -6,6 +6,11 @@ const Timeline = ({ layout, onCancle }) => {
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
 
+  // const isVertical = layout.orientation === "vertical";
+
+  // console.log("in timeline layout Orientation : ", isVertical);
+  console.log("in timeline layout Orientation : ", layout);
+
   const mediaRef = useRef(null);
 
   const handleDragOver = (e) => {

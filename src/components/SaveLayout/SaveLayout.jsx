@@ -22,7 +22,26 @@ const SaveLayout = ({
   };
 
   const handleSaveNewLayout = (newLayout) => {
-    const updatedLayouts = [...layouts, newLayout];
+    // Swap the width/height and x/y for vertical orientation before saving
+    const updatedDivisions = newLayout.divisions.map((division) => {
+      if (newLayout.orientation === "vertical") {
+        return {
+          ...division,
+          x: division.y, // Swap x and y
+          y: division.x,
+          width: division.height, // Swap width and height
+          height: division.width,
+        };
+      }
+      return division; // Keep as is for horizontal orientation
+    });
+
+    const updatedLayout = {
+      ...newLayout,
+      divisions: updatedDivisions, // Use the updated divisions
+    };
+
+    const updatedLayouts = [...layouts, updatedLayout];
     setLayouts(updatedLayouts);
     localStorage.setItem("layouts", JSON.stringify(updatedLayouts));
     setIsCustomLayoutOpen(false); // Close the modal
@@ -43,20 +62,28 @@ const SaveLayout = ({
         {layouts.length === 0 ? (
           <p>No layouts saved yet.</p>
         ) : (
-          <div className="flex flex-wrap gap-4">
+          <div
+            className="flex gap-4 overflow-x-auto "
+            style={{ whiteSpace: "nowrap" }}
+          >
             {layouts.map((layout, layoutIndex) => {
               const scaleFactor = 4;
-              const miniWidth = 100;
-              const miniHeight = 70;
+              let miniWidth = 100;
+              let miniHeight = 70;
+
+              // Apply saved orientation to the mini preview
+              if (layout.orientation === "vertical") {
+                [miniWidth, miniHeight] = [miniHeight, miniWidth]; // Swap width and height for vertical orientation
+              }
 
               const isLoaded = layoutIndex === currentLayoutIndex;
 
               return (
                 <div
                   key={layoutIndex}
-                  className={`border border-gray-300 rounded p-2 ${
+                  className={`border border-gray-300 rounded mx-1  my-2 p-2 ${
                     isLoaded
-                      ? "outline-blue-500	outline outline-offset-2 outline-4 ... bg-sky-500 bg-opacity-20"
+                      ? "outline-blue-500 outline outline-offset-2 outline-4 bg-sky-500 bg-opacity-20"
                       : ""
                   }`}
                 >
@@ -134,6 +161,7 @@ const SaveLayout = ({
             >
               <IoCloseSharp className="text-3xl" />
             </button>
+            {/* i want to change for device orientatin */}
             <CustomLayout onSaveLayout={handleSaveNewLayout} />{" "}
             {/* Pass save function */}
           </div>

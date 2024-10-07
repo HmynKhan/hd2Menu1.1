@@ -7,7 +7,6 @@ import { AiOutlineClose } from "react-icons/ai";
 import { RiVideoDownloadFill } from "react-icons/ri";
 import { FaPlayCircle } from "react-icons/fa";
 
-// 860762
 // Utility function to convert seconds to MM:SS format
 const formatTime = (seconds) => {
   const minutes = Math.floor(seconds / 60);
@@ -22,7 +21,7 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
     fourk: { width: 3840, height: 2160 },
   };
 
-  const selectedResolution = layout.resolution || "fullhd"; // Default to full HD
+  const selectedResolution = layout.resolution || "hd"; // Default to full HD
   const { width: layoutWidth, height: layoutHeight } =
     resolutionMap[selectedResolution];
 
@@ -490,7 +489,7 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
   };
   // to render video in canva end
 
-  // for heavy memory usage
+  // for layout orientation for h or v
   const scaleX = layoutWidth / 400; // Calculate scaling factor for width
   const scaleY = layoutHeight / 300; // Calculate scaling factor for height
   const extraPadding = 130; // Add padding to fit the icons/buttons
