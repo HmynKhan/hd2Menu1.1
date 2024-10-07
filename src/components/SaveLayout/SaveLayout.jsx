@@ -154,7 +154,7 @@ const SaveLayout = ({
       {/* Step 3: Conditionally render the CustomLayout component in a pop-up/modal */}
       {isCustomLayoutOpen && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
-          <div className="bg-white p-6 rounded-md shadow-lg max-w-3xl w-full relative">
+          <div className="bg-white p-6 rounded-md shadow-lg max-w-3xl w-full  max-h-[95vh] overflow-auto relative">
             <button
               className="absolute top-2 right-2 bg-transparent-500 text-black hover:text-red-600 px-4 py-2 rounded-2xl"
               onClick={() => setIsCustomLayoutOpen(false)}

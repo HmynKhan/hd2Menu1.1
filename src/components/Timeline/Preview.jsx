@@ -19,9 +19,13 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
     hd: { width: 1280, height: 720 },
     fullhd: { width: 1920, height: 1080 },
     fourk: { width: 3840, height: 2160 },
+    Vhd: { width: 720, height: 1280 },
+    Vfullhd: { width: 1080, height: 1920 },
+    Vfourk: { width: 2160, height: 3840 },
   };
 
   const selectedResolution = layout.resolution || "hd"; // Default to full HD
+  //  i want to change in code for v orientation
   const { width: layoutWidth, height: layoutHeight } =
     resolutionMap[selectedResolution];
 
@@ -254,30 +258,19 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
 
       // Transcode WebM to MP4 using the selected resolution
       console.log("Starting FFmpeg transcode from WebM to MP4...");
-      // await ffmpeg.exec([
-      //   "-i",
-      //   "input.webm",
-      //   "-vf",
-      //   `scale=${layoutWidth}:${layoutHeight}`,
-      //   // ,format=yuv420p`, // Ensure scaling and color format are handled correctly
-      //   "-c:v",
-      //   "libx264", // Better codec for MP4 encoding
-      //   "-crf",
-      //   "23", // Quality factor (lower = better quality)
-      //   "-preset",
-      //   "fast", // Faster encoding for testing
-      //   "output.mp4",
-      // ]);
-
       await ffmpeg.exec([
         "-i",
         "input.webm",
         "-vf",
-        `scale=${layoutWidth}:${layoutHeight}`,
+        `scale=${
+          layout.orientation === "vertical"
+            ? `${layoutHeight}:${layoutWidth}`
+            : `${layoutWidth}:${layoutHeight}`
+        }`,
         "-c:v",
         "libx264",
         "-pix_fmt",
-        "yuv420p", // Ensure YUV color format
+        "yuv420p",
         "-crf",
         "23",
         "-preset",
@@ -306,7 +299,7 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
 
       console.log("MP4 download triggered successfully.");
 
-      ffmpeg.exit(); // Free up memory by unloading FFmpeg
+      // ffmpeg.exit(); // Free up memory by unloading FFmpeg
     } catch (error) {
       console.error("Error during transcoding:", error);
       alert("An error occurred during the conversion process.");
@@ -357,6 +350,7 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
     }
   }, [ffmpegLoaded]); // Load FFmpeg in the background
 
+  // startRecording useEffect
   useEffect(() => {
     const startRecording = () => {
       const canvas = layoutRef.current.querySelector("canvas");
@@ -366,13 +360,22 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       const videoCapabilities =
         navigator.mediaDevices.getSupportedConstraints();
 
+      let canvasWidth = layoutWidth;
+      let canvasHeight = layoutHeight;
+
+      // Handle vertical orientation by swapping width and height
+      if (layout.orientation === "vertical") {
+        canvasWidth = layoutHeight; // Swap width with height
+        canvasHeight = layoutWidth; // Swap height with width
+      }
+
+      // Check if browser supports 4K or necessary resolutions
       if (
-        layoutWidth >= 3840 &&
-        layoutHeight >= 2160 &&
+        canvasWidth >= 3840 &&
+        canvasHeight >= 2160 &&
         videoCapabilities.width &&
         videoCapabilities.height
       ) {
-        // Check if browser supports 4K
         if (
           !videoCapabilities.width.max ||
           !videoCapabilities.height.max ||
@@ -386,13 +389,11 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
         }
       }
 
-      // Get browser capabilities end
-
       const ctx = canvas.getContext("2d");
 
-      // Set background color to white
-      ctx.fillStyle = "white";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Set background color to white for the recording
+      ctx.fillStyle = "black";
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight); // Adjust canvas size based on orientation
 
       const stream = canvas.captureStream();
       const mediaRecorder = new MediaRecorder(stream);
@@ -401,34 +402,26 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           recordedChunksRef.current.push(event.data);
-          console.log("WebM chunk recorded", event.data);
         }
       };
 
-      console.log("Starting media recording immediately");
       mediaRecorder.start();
 
-      // Stop recording after the total duration of all divisions + buffer
-      const recordingDuration = totalDuration * 1000; // Convert to milliseconds
-      const bufferDuration = 250; // 1 second buffer
+      const recordingDuration = totalDuration * 1000; // Convert total duration to milliseconds
+      const bufferDuration = 250; // 1 second buffer for recording
 
       setTimeout(() => {
         mediaRecorder.stop();
-      }, recordingDuration + bufferDuration); // Add buffer to recording duration
+      }, recordingDuration + bufferDuration); // Add buffer to recording
 
-      console.log(
-        "recordingDuration in canva recorder (with buffer):",
-        recordingDuration + bufferDuration
-      );
-
-      // Clean up when component unmounts
+      // Clean up function when component unmounts
       return () => {
         mediaRecorder.stop();
       };
     };
 
     if (totalDuration > 0) {
-      startRecording(); // Start recording right away
+      startRecording(); // Start recording as soon as the total duration is set
     }
   }, [totalDuration]);
 
@@ -494,24 +487,47 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
   const scaleY = layoutHeight / 300; // Calculate scaling factor for height
   const extraPadding = 130; // Add padding to fit the icons/buttons
 
+  // Modify layout dimensions based on orientation
+  let modifiedLayoutWidth = layoutWidth;
+  let modifiedLayoutHeight = layoutHeight;
+
+  // If the layout is in vertical orientation, swap the width and height
+  if (layout.orientation === "vertical") {
+    modifiedLayoutWidth = layoutHeight;
+    modifiedLayoutHeight = layoutWidth;
+  }
+
   // i want to apply zoom in and out for resolution 720
 
   useEffect(() => {
-    // Check if the resolution is 720p and apply the zoom level accordingly
-    if (selectedResolution === "hd") {
-      document.body.style.zoom = "67%"; // Set zoom to 67% when previewing 720p
-    } else if (selectedResolution === "fullhd") {
-      document.body.style.zoom = "45%"; // Set zoom to 67% when previewing 720p
-    } else if (selectedResolution === "fourk") {
-      document.body.style.zoom = "22%"; // Set zoom to 67% when previewing 720p
+    // Check for resolution and apply zoom based on the orientation and selected resolution
+    if (layout.orientation === "vertical") {
+      if (selectedResolution === "hd") {
+        // alert("Vhd V orientation");
+        document.body.style.zoom = "40%"; // Apply 50% zoom for vertical 720p layout
+      } else if (selectedResolution === "fullhd") {
+        document.body.style.zoom = "27%"; // Apply 50% zoom for vertical 1080p layout
+      } else if (selectedResolution === "fourk") {
+        document.body.style.zoom = "13%"; // Apply 50% zoom for vertical 4K layout
+      }
+    } else {
+      // For horizontal layouts, keep the original zoom logic
+      if (selectedResolution === "hd") {
+        document.body.style.zoom = "67%"; // Set zoom to 67% for horizontal 720p
+      } else if (selectedResolution === "fullhd") {
+        document.body.style.zoom = "45%"; // Set zoom to 45% for horizontal 1080p
+      } else if (selectedResolution === "fourk") {
+        document.body.style.zoom = "22%"; // Set zoom to 22% for horizontal 4K
+      }
     }
 
     // Clean up function to reset the zoom when the component is unmounted
     return () => {
       document.body.style.zoom = "100%"; // Reset zoom to 100% on popup close
     };
-  }, [selectedResolution]); // Run this effect when the resolution changes
+  }, [selectedResolution, layout.orientation]); // Run this effect when the resolution or orientation changes
 
+  console.log("selectedResolution :> ", selectedResolution);
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
@@ -526,8 +542,8 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       <div
         className="bg-white p-5  rounded"
         style={{
-          width: layoutWidth + extraPadding + "px",
-          height: layoutHeight + extraPadding + "px",
+          width: modifiedLayoutWidth + extraPadding + "px",
+          height: modifiedLayoutHeight + extraPadding + "px",
           backgroundColor: "#F3E5AB",
         }}
         // style={{ paddingBottom: "20px", backgroundColor: "skyblue" }}
@@ -579,9 +595,13 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
           className="flex items-center justify-center mb-2 flex-col gap-1"
         >
           <Stage
-            width={layoutWidth}
-            height={layoutHeight}
-            style={{ border: "3px solid black", backgroundColor: "white" }} // Add background color
+            width={
+              layout.orientation === "vertical" ? layoutHeight : layoutWidth
+            } // Swap for vertical
+            height={
+              layout.orientation === "vertical" ? layoutWidth : layoutHeight
+            } // Swap for vertical
+            style={{ border: "3px solid black", backgroundColor: "black" }}
           >
             <Layer ref={layerRef}>
               <Rect
@@ -589,7 +609,7 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
                 y={0}
                 width={layoutWidth}
                 height={layoutHeight}
-                fill="white" // This will ensure the background is white
+                fill="black" // This will ensure the background is white
               />
 
               {layout?.divisions?.map((d, index) => {
@@ -637,6 +657,19 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
                 const currentMedia = mediaItems[currentMediaIndex];
                 const [image] = useImage(currentMedia?.mediaSrc, "anonymous");
 
+                let divisionX = d?.x * scaleX;
+                let divisionY = d?.y * scaleY;
+                let divisionWidth = d?.width * scaleX;
+                let divisionHeight = d?.height * scaleY;
+
+                // Swap width and height if layout is in vertical orientation
+                if (layout.orientation === "vertical") {
+                  divisionX = d?.y * scaleY; // Swap X and Y positions
+                  divisionY = d?.x * scaleX;
+                  divisionWidth = d?.height * scaleY; // Swap width and height
+                  divisionHeight = d?.width * scaleX;
+                }
+
                 return (
                   <React.Fragment key={index}>
                     {isCycling && (
@@ -648,10 +681,10 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
                             : image
                         }
                         crossOrigin="anonymous"
-                        x={d?.x * scaleX}
-                        y={d?.y * scaleY}
-                        width={d?.width * scaleX}
-                        height={d?.height * scaleY}
+                        x={divisionX} // Use modified x
+                        y={divisionY} // Use modified y
+                        width={divisionWidth} // Use modified width
+                        height={divisionHeight} // Use modified height
                       />
                     )}
                   </React.Fragment>

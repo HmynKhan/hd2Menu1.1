@@ -18,7 +18,7 @@
     <script>
       if (!crossOriginIsolated) {
         // Fallback to ArrayBuffer when SharedArrayBuffer is not available
-        SharedArrayBuffer = ArrayBuffer;
+        let SharedArrayBuffer = ArrayBuffer;
       }
     </script>
 
