@@ -12,6 +12,7 @@
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.10",
     "@ffmpeg/util": "^0.12.1",
+    "axios": "^1.7.7",
     "dom-to-image": "^2.6.0",
     "html2canvas": "^1.4.1",
     "konva": "^9.3.15",

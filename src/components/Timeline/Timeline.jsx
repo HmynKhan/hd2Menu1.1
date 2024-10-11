@@ -5,11 +5,7 @@ const Timeline = ({ layout, onCancle }) => {
   const [divisionsMedia, setDivisionsMedia] = useState({});
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
-
-  // const isVertical = layout.orientation === "vertical";
-
-  // console.log("in timeline layout Orientation : ", isVertical);
-  // console.log("in timeline layout Orientation : ", layout);
+  const [draggedMedia, setDraggedMedia] = useState(null); // For tracking the dragged media item
 
   const mediaRef = useRef(null);
 
@@ -23,22 +19,66 @@ const Timeline = ({ layout, onCancle }) => {
     const mediaId = e.dataTransfer.getData("mediaId");
     const mediaType = e.dataTransfer.getData("mediaType");
 
+    // Only add the media if it's valid (image or video type)
+    if (mediaSrc && (mediaType === "image" || mediaType === "video")) {
+      setDivisionsMedia((prevState) => {
+        const divisionMedia = prevState[index] || [];
+        return {
+          ...prevState,
+          [index]: [
+            ...divisionMedia,
+            {
+              mediaSrc,
+              mediaId,
+              mediaType,
+              appearanceTime: 3,
+              duration: mediaType === "video" ? undefined : 3000,
+            },
+          ],
+        };
+      });
+    }
+  };
+
+  const handleDragStart = (divisionIndex, mediaIndex) => {
+    setDraggedMedia({ divisionIndex, mediaIndex });
+  };
+
+  const handleDropMedia = (divisionIndex, mediaIndex) => {
+    if (!draggedMedia || draggedMedia.divisionIndex !== divisionIndex) return;
+
     setDivisionsMedia((prevState) => {
-      const divisionMedia = prevState[index] || [];
+      const updatedDivisionMedia = [...prevState[divisionIndex]];
+
+      // Remove the dragged media item from its original position
+      const [draggedItem] = updatedDivisionMedia.splice(
+        draggedMedia.mediaIndex,
+        1
+      );
+
+      // Validate that draggedItem is a valid media object with correct mediaType and mediaSrc
+      if (
+        draggedItem &&
+        draggedItem.mediaSrc &&
+        (draggedItem.mediaType === "image" || draggedItem.mediaType === "video")
+      ) {
+        // Insert the dragged media item at the new position
+        updatedDivisionMedia.splice(mediaIndex, 0, draggedItem);
+      }
+
+      // Filter out any invalid media items in case one got added
       return {
         ...prevState,
-        [index]: [
-          ...divisionMedia,
-          {
-            mediaSrc,
-            mediaId,
-            mediaType,
-            appearanceTime: 3,
-            duration: mediaType === "video" ? undefined : 3000,
-          },
-        ],
+        [divisionIndex]: updatedDivisionMedia.filter(
+          (media) =>
+            media &&
+            media.mediaSrc &&
+            (media.mediaType === "image" || media.mediaType === "video") // Only allow valid media types
+        ),
       };
     });
+
+    setDraggedMedia(null); // Reset dragged media after the drop
   };
 
   const handleMediaClick = (divisionIndex, mediaIndex) => {
@@ -85,7 +125,14 @@ const Timeline = ({ layout, onCancle }) => {
         {divisionsMedia[index] && (
           <div className="flex flex-wrap gap-3">
             {divisionsMedia[index].map((media, mediaIndex) => (
-              <div key={mediaIndex} className="relative mb-2">
+              <div
+                key={mediaIndex}
+                className="relative mb-2"
+                draggable // Make media item draggable
+                onDragStart={() => handleDragStart(index, mediaIndex)} // Handle drag start
+                onDrop={() => handleDropMedia(index, mediaIndex)} // Handle drop
+                onDragOver={(e) => e.preventDefault()} // Allow drop
+              >
                 <div
                   className={`${
                     selectedMedia &&
@@ -105,8 +152,6 @@ const Timeline = ({ layout, onCancle }) => {
                   ) : media.mediaType === "video" ? (
                     <video
                       src={media.mediaSrc}
-                      // autoPlay
-                      // loop
                       controls={false}
                       className="w-[100px] h-auto cursor-pointer"
                     />

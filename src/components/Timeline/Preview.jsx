@@ -6,6 +6,11 @@ import { fetchFile, toBlobURL } from "@ffmpeg/util";
 import { AiOutlineClose } from "react-icons/ai";
 import { RiVideoDownloadFill } from "react-icons/ri";
 import { FaPlayCircle } from "react-icons/fa";
+import { FaExternalLinkAlt } from "react-icons/fa";
+// import axios from "axios";
+// import { getToken } from "../../services/localStorage"; // Adjust the path based on your folder structure
+// import request from "../../services/request"; // Adjust the path based on your folder structure
+import { getFFmpegInstance } from "../../utils/ffmpegSingleton"; // Import the FFmpeg singleton
 
 // Utility function to convert seconds to MM:SS format
 const formatTime = (seconds) => {
@@ -196,67 +201,35 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
 
   // Update the handleDownload function to download recorded video start
 
-  const ffmpegRef = useRef(new FFmpeg());
+  // const ffmpegRef = useRef(new FFmpeg());
 
   const handleDownload = async () => {
-    const ffmpeg = ffmpegRef.current;
+    const ffmpeg = await getFFmpegInstance(); // Get the global FFmpeg instance
 
-    if (!ffmpegLoaded) {
-      const baseURL = "https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/esm";
-      try {
-        console.log("Loading FFmpeg multi-threaded version...");
-        // Load FFmpeg using provided URL
-        await ffmpeg.load({
-          coreURL: await toBlobURL(
-            `${baseURL}/ffmpeg-core.js`,
-            "text/javascript"
-          ),
-          wasmURL: await toBlobURL(
-            `${baseURL}/ffmpeg-core.wasm`,
-            "application/wasm"
-          ),
-          workerURL: await toBlobURL(
-            `${baseURL}/ffmpeg-core.worker.js`,
-            "text/javascript"
-          ),
-        });
-        setFfmpegLoaded(true);
-        console.log("FFmpeg loaded successfully.");
-      } catch (error) {
-        console.error("Error loading FFmpeg:", error);
-        alert("Failed to load FFmpeg.");
-        return;
-      }
-    }
-
-    // Check if any recorded chunks are available
     if (recordedChunksRef.current.length === 0) {
       alert("No recording available to download!");
       return;
     }
 
     try {
-      // Create WebM Blob from recorded chunks
       console.log("Creating WebM Blob from recorded chunks...");
       const webmBlob = new Blob(recordedChunksRef.current, {
         type: "video/webm",
       });
+
       console.log(`WebM Blob created, size: ${webmBlob.size} bytes`);
 
-      if (webmBlob.size === 0) {
-        throw new Error("Recorded WebM Blob is empty. No video was captured.");
-      }
-
-      // Write WebM data to FFmpeg's virtual file system
-      console.log("Writing WebM file to FFmpeg...");
       const webmData = await fetchFile(webmBlob);
-      // const webmData = await fetchFile(
-      //   "https://raw.githubusercontent.com/ffmpegwasm/testdata/master/Big_Buck_Bunny_180_10s.webm"
-      // );
-
       await ffmpeg.writeFile("input.webm", webmData);
 
-      // Transcode WebM to MP4 using the selected resolution
+      const videoElement = document.createElement("video");
+      videoElement.src = URL.createObjectURL(webmBlob);
+      videoElement.onloadedmetadata = () => {
+        console.log(
+          `debug WebM video duration: ${videoElement.duration} seconds`
+        );
+      };
+
       console.log("Starting FFmpeg transcode from WebM to MP4...");
       await ffmpeg.exec([
         "-i",
@@ -272,21 +245,15 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
         "-pix_fmt",
         "yuv420p",
         "-crf",
-        "23",
+        "30",
         "-preset",
-        "fast",
+        "ultrafast",
         "-movflags",
         "faststart",
         "output.mp4",
       ]);
 
-      //  `scale=${layoutWidth}:${layoutHeight}`, // Scaling based on layout dimensions
-
-      // Read the resulting MP4 file
       const mp4Data = await ffmpeg.readFile("output.mp4");
-      console.log("MP4 file generated, size:", mp4Data.length);
-
-      // Create MP4 Blob and download it
       const mp4Blob = new Blob([mp4Data.buffer], { type: "video/mp4" });
       const mp4Url = URL.createObjectURL(mp4Blob);
 
@@ -298,57 +265,57 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       document.body.removeChild(aMp4);
 
       console.log("MP4 download triggered successfully.");
-
-      // ffmpeg.exit(); // Free up memory by unloading FFmpeg
+      recordedChunksRef.current = [];
     } catch (error) {
       console.error("Error during transcoding:", error);
-      alert("An error occurred during the conversion process.");
     }
+  };
 
-    // ffmpeg.exit();
+  const handleSaveAndOpenVideo = async () => {
+    alert("url video open in new tab");
   };
 
   // Update the handleDownload function to download recorded video end
 
   // Use effect to start recording when component mounts start
   // for high memory usage
-  useEffect(() => {
-    if (!ffmpegLoaded) {
-      const loadFFmpeg = async () => {
-        const baseURL = "https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/esm";
-        const ffmpeg = ffmpegRef.current;
+  // This will load FFmpeg once when the component mounts
+  // useEffect(() => {
+  //   const loadFFmpeg = async () => {
+  //     const baseURL = "https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/esm";
+  //     const ffmpeg = ffmpegRef.current;
 
-        // Set up log event
-        ffmpeg.on("log", ({ message }) => {
-          console.log(`[FFmpeg] ${message}`);
-        });
+  //     ffmpeg.on("log", ({ message }) => {
+  //       console.log(`[FFmpeg] ${message}`);
+  //     });
 
-        try {
-          console.log("Loading FFmpeg in the background...");
-          await ffmpeg.load({
-            coreURL: await toBlobURL(
-              `${baseURL}/ffmpeg-core.js`,
-              "text/javascript"
-            ),
-            wasmURL: await toBlobURL(
-              `${baseURL}/ffmpeg-core.wasm`,
-              "application/wasm"
-            ),
-            workerURL: await toBlobURL(
-              `${baseURL}/ffmpeg-core.worker.js`,
-              "text/javascript"
-            ),
-          });
-          setFfmpegLoaded(true);
-          console.log("FFmpeg loaded successfully.");
-        } catch (error) {
-          console.error("Error loading FFmpeg:", error);
-        }
-      };
+  //     try {
+  //       console.log("Loading FFmpeg in the background...");
+  //       await ffmpeg.load({
+  //         coreURL: await toBlobURL(
+  //           `${baseURL}/ffmpeg-core.js`,
+  //           "text/javascript"
+  //         ),
+  //         wasmURL: await toBlobURL(
+  //           `${baseURL}/ffmpeg-core.wasm`,
+  //           "application/wasm"
+  //         ),
+  //         workerURL: await toBlobURL(
+  //           `${baseURL}/ffmpeg-core.worker.js`,
+  //           "text/javascript"
+  //         ),
+  //       });
+  //       setFfmpegLoaded(true);
+  //       console.log("FFmpeg loaded successfully.");
+  //     } catch (error) {
+  //       console.error("Error loading FFmpeg:", error);
+  //     }
+  //   };
 
-      loadFFmpeg();
-    }
-  }, [ffmpegLoaded]); // Load FFmpeg in the background
+  //   if (!ffmpegLoaded) {
+  //     loadFFmpeg();
+  //   }
+  // }, [ffmpegLoaded]);
 
   // startRecording useEffect
   useEffect(() => {
@@ -392,7 +359,7 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       const ctx = canvas.getContext("2d");
 
       // Set background color to white for the recording
-      ctx.fillStyle = "black";
+      ctx.fillStyle = "white";
       ctx.fillRect(0, 0, canvasWidth, canvasHeight); // Adjust canvas size based on orientation
 
       const stream = canvas.captureStream();
@@ -407,12 +374,12 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
 
       mediaRecorder.start();
 
-      const recordingDuration = totalDuration * 1000; // Convert total duration to milliseconds
-      const bufferDuration = 250; // 1 second buffer for recording
+      // const recordingDuration = totalDuration * 1000; // Convert total duration to milliseconds
+      const bufferDuration = 200; // 1 second buffer for recording
 
       setTimeout(() => {
         mediaRecorder.stop();
-      }, recordingDuration + bufferDuration); // Add buffer to recording
+      }, totalDuration * 1000 + bufferDuration); // Ensure the recording stops exactly at the total duration
 
       // Clean up function when component unmounts
       return () => {
@@ -420,6 +387,7 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       };
     };
 
+    console.log("debug totalDuration : ", totalDuration);
     if (totalDuration > 0) {
       startRecording(); // Start recording as soon as the total duration is set
     }
@@ -527,7 +495,20 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
     };
   }, [selectedResolution, layout.orientation]); // Run this effect when the resolution or orientation changes
 
-  console.log("selectedResolution :> ", selectedResolution);
+  useEffect(() => {
+    return () => {
+      if (layoutRef.current) {
+        const canvas = layoutRef.current.querySelector("canvas");
+        if (canvas) {
+          const context = canvas.getContext("2d");
+          context.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+          canvas.width = 0; // Release the canvas memory
+          canvas.height = 0;
+        }
+      }
+    };
+  }, []);
+
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
@@ -579,6 +560,13 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
             </button>
 
             <button
+              className="w-15 h-15 px-4 py-2 bg-blue-500 hover:bg-blue-700 text-white cursor-pointer rounded"
+              onClick={handleSaveAndOpenVideo}
+            >
+              <FaExternalLinkAlt className="text-3xl" />
+            </button>
+
+            <button
               onClick={() => {
                 document.body.style.zoom = "100%"; // Reset zoom to 100% on close
                 onClose(); // Call the existing onClose prop function to handle the rest of the closing logic
@@ -601,15 +589,19 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
             height={
               layout.orientation === "vertical" ? layoutWidth : layoutHeight
             } // Swap for vertical
-            style={{ border: "3px solid black", backgroundColor: "black" }}
+            style={{ border: "3px solid black", backgroundColor: "white" }}
           >
             <Layer ref={layerRef}>
               <Rect
                 x={0}
                 y={0}
-                width={layoutWidth}
-                height={layoutHeight}
-                fill="black" // This will ensure the background is white
+                width={
+                  layout.orientation === "vertical" ? layoutHeight : layoutWidth
+                } // Swap for vertical
+                height={
+                  layout.orientation === "vertical" ? layoutWidth : layoutHeight
+                } // Swap for vertical
+                fill="white" // This will ensure the background is white
               />
 
               {layout?.divisions?.map((d, index) => {

@@ -3,32 +3,32 @@ import { IoMdAdd } from "react-icons/io";
 
 const VideoForm = () => {
   // State management for form fields
-  const [fromDate, setFromDate] = useState("");
-  const [fromTime, setFromTime] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [toTime, setToTime] = useState("");
-  const [days, setDays] = useState("");
+  // const [fromDate, setFromDate] = useState("");
+  // const [fromTime, setFromTime] = useState("");
+  // const [toDate, setToDate] = useState("");
+  // const [toTime, setToTime] = useState("");
+  // const [days, setDays] = useState("");
   const [playlistName, setPlaylistName] = useState("");
-  const [playlistType, setPlaylistType] = useState("");
-  const [devices, setDevices] = useState("");
-  const [message, setMessage] = useState("");
+  // const [playlistType, setPlaylistType] = useState("");
+  // const [devices, setDevices] = useState("");
+  // const [message, setMessage] = useState("");
 
   // Handle form submission
   const handleSubmit = (e) => {
     e.preventDefault();
     // Perform necessary actions on form submit
     console.log({
-      fromDate,
-      fromTime,
-      toDate,
-      toTime,
-      days,
+      // fromDate,
+      // fromTime,
+      // toDate,
+      // toTime,
+      // days,
       playlistName,
-      playlistType,
-      devices,
-      message,
+      // playlistType,
+      // devices,
+      // message,
     });
-    alert("Form Submitted!");
+    // alert("Form Submitted!");
   };
 
   return (
@@ -37,8 +37,8 @@ const VideoForm = () => {
       onSubmit={handleSubmit}
     >
       {/* 1st Row: From Date, From Time, To Date, To Time */}
-      <div className="grid grid-cols-4 gap-4">
-        {/* From Date */}
+      {/* <div className="grid grid-cols-4 gap-4">
+ 
         <div>
           <label className="block mb-1 text-sm font-medium">From Date</label>
           <input
@@ -50,7 +50,6 @@ const VideoForm = () => {
           />
         </div>
 
-        {/* From Time */}
         <div>
           <label className="block mb-1 text-sm font-medium">From Time</label>
           <input
@@ -61,7 +60,6 @@ const VideoForm = () => {
           />
         </div>
 
-        {/* To Date */}
         <div>
           <label className="block mb-1 text-sm font-medium">To Date</label>
           <input
@@ -73,7 +71,6 @@ const VideoForm = () => {
           />
         </div>
 
-        {/* To Time */}
         <div>
           <label className="block mb-1 text-sm font-medium">To Time</label>
           <input
@@ -83,10 +80,10 @@ const VideoForm = () => {
             className="border border-gray-300 p-2 rounded w-full"
           />
         </div>
-      </div>
+      </div> */}
 
       {/* 2nd Row: Days */}
-      <div className="grid grid-cols-1 gap-4 mt-4">
+      {/* <div className="grid grid-cols-1 gap-4 mt-4">
         <div>
           <label className="block mb-1 text-sm font-medium">Days</label>
           <input
@@ -97,26 +94,22 @@ const VideoForm = () => {
             placeholder="Enter number of days"
           />
         </div>
-      </div>
+      </div> */}
 
       {/* 3rd Row: Playlist Name, Playlist Type, Select Devices */}
-      <div className="grid grid-cols-3 gap-4 mt-4">
+      <div className="flex items-center gap-4 mt-4">
         {/* Playlist Name */}
-        <div>
-          <label className="block mb-1 text-sm font-medium">
-            Playlist Name
-          </label>
-          <input
-            type="text"
-            value={playlistName}
-            onChange={(e) => setPlaylistName(e.target.value)}
-            className="border border-gray-300 p-2 rounded w-full"
-            placeholder="Playlist Name"
-          />
-        </div>
+        <label className="text-sm font-medium">Playlist Name</label>
+        <input
+          type="text"
+          value={playlistName}
+          onChange={(e) => setPlaylistName(e.target.value)}
+          className="border border-gray-300 p-2 rounded flex-1"
+          placeholder="Playlist Name"
+        />
 
         {/* Playlist Type */}
-        <div>
+        {/* <div>
           <label className="block mb-1 text-sm font-medium">
             Playlist Type
           </label>
@@ -130,10 +123,10 @@ const VideoForm = () => {
             <option value="type2">Type 2</option>
             <option value="type3">Type 3</option>
           </select>
-        </div>
+        </div> */}
 
         {/* Select Devices */}
-        <div>
+        {/* <div>
           <label className="block mb-1 text-sm font-medium">
             Select Devices
           </label>
@@ -147,11 +140,11 @@ const VideoForm = () => {
             <option value="device2">Device 2</option>
             <option value="device3">Device 3</option>
           </select>
-        </div>
+        </div> */}
       </div>
 
       {/* 4th Row: Select Message */}
-      <div className="grid grid-cols-1 gap-4 mt-4">
+      {/* <div className="grid grid-cols-1 gap-4 mt-4">
         <div>
           <label className="block mb-1 text-sm font-medium">
             Select Message
@@ -167,7 +160,7 @@ const VideoForm = () => {
             <option value="message3">Message 3</option>
           </select>
         </div>
-      </div>
+      </div> */}
 
       {/* Bottom Left: Save Button */}
       <div className="mt-6 text-left">
