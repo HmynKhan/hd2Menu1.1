@@ -1,16 +1,15 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import { Stage, Rect, Layer, Image } from "react-konva";
 import useImage from "use-image";
-import { FFmpeg } from "@ffmpeg/ffmpeg";
-import { fetchFile, toBlobURL } from "@ffmpeg/util";
+// import { FFmpeg } from "@ffmpeg/ffmpeg";
+import { fetchFile /*toBlobURL*/ } from "@ffmpeg/util";
 import { AiOutlineClose } from "react-icons/ai";
 import { RiVideoDownloadFill } from "react-icons/ri";
 import { FaPlayCircle } from "react-icons/fa";
-import { FaExternalLinkAlt } from "react-icons/fa";
-// import axios from "axios";
-// import { getToken } from "../../services/localStorage"; // Adjust the path based on your folder structure
-// import request from "../../services/request"; // Adjust the path based on your folder structure
-import { getFFmpegInstance } from "../../utils/ffmpegSingleton"; // Import the FFmpeg singleton
+import { getFFmpegInstance } from "../../utils/ffmpegSingleton";
+import Login from "./Login";
+import { getToken } from "../../services/localStorage";
+import { PlaylistContext } from "../../App";
 
 // Utility function to convert seconds to MM:SS format
 const formatTime = (seconds) => {
@@ -20,6 +19,22 @@ const formatTime = (seconds) => {
 };
 
 const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
+  // for api authentication start
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [ffmpegInstance, setFfmpegInstance] = useState(null); // Add state
+
+  // i want to chnage code for download button disable
+  const [isDownloading, setIsDownloading] = useState(false); // Add this line
+  const [isUploading, setisUploading] = useState(false); // Add this line
+  const [isPlaying, setIsPlaying] = useState(false); // New state for play button
+
+  // for api upload video playlistname start
+  const { playlistName } = useContext(PlaylistContext) || {};
+  const videoName = playlistName?.trim() || `default-playlist-${Date.now()}`;
+  // for api upload video playlistname end
+  // for api authentication end
+
   const resolutionMap = {
     hd: { width: 1280, height: 720 },
     fullhd: { width: 1920, height: 1080 },
@@ -36,10 +51,17 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
 
   // play layout again code start
   const handlePlay = () => {
-    setStartTime(Date.now()); // Reset the timer
-    setProgress(0); // Reset the progress bar
-    setShouldStopCycling(false); // Reset cycling globally
-    setTimeout(() => setShouldStopCycling(true), totalDuration * 1000); // Automatically stop cycling when progress bar reaches 100%
+    if (isPlaying) return;
+
+    setIsPlaying(true);
+    setStartTime(Date.now());
+    setProgress(0);
+    setShouldStopCycling(false);
+    // Automatically stop cycling when progress bar reaches 100%
+    setTimeout(() => {
+      setShouldStopCycling(true);
+      setIsPlaying(false);
+    }, totalDuration * 1000);
   };
 
   // play layout again code end
@@ -204,10 +226,18 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
   // const ffmpegRef = useRef(new FFmpeg());
 
   const handleDownload = async () => {
-    const ffmpeg = await getFFmpegInstance(); // Get the global FFmpeg instance
+    if (isDownloading) return;
+    setIsDownloading(true);
+
+    let ffmpeg = ffmpegInstance;
+    if (!ffmpeg) {
+      ffmpeg = await getFFmpegInstance();
+      setFfmpegInstance(ffmpeg); // Save FFmpeg instance for future use
+    }
 
     if (recordedChunksRef.current.length === 0) {
       alert("No recording available to download!");
+      setIsDownloading(false);
       return;
     }
 
@@ -224,11 +254,6 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
 
       const videoElement = document.createElement("video");
       videoElement.src = URL.createObjectURL(webmBlob);
-      videoElement.onloadedmetadata = () => {
-        console.log(
-          `debug WebM video duration: ${videoElement.duration} seconds`
-        );
-      };
 
       console.log("Starting FFmpeg transcode from WebM to MP4...");
       await ffmpeg.exec([
@@ -268,54 +293,144 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       recordedChunksRef.current = [];
     } catch (error) {
       console.error("Error during transcoding:", error);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
   const handleSaveAndOpenVideo = async () => {
-    alert("url video open in new tab");
+    if (isUploading) return;
+    setisUploading(true);
+
+    const token = getToken(); // Fetch token from localStorage
+    if (!token) {
+      setShowLogin(true);
+      setisUploading(false);
+      return;
+    }
+
+    try {
+      // Check if recording exists
+      if (recordedChunksRef.current.length === 0) {
+        alert("No recording available to upload!");
+        setisUploading(false);
+        return;
+      }
+
+      console.log("Creating WebM Blob from recorded chunks...");
+      const webmBlob = new Blob(recordedChunksRef.current, {
+        type: "video/webm",
+      });
+
+      let ffmpeg = ffmpegInstance;
+      if (!ffmpeg) {
+        ffmpeg = await getFFmpegInstance();
+        setFfmpegInstance(ffmpeg); // Save FFmpeg instance for future use
+      }
+
+      const webmData = await fetchFile(webmBlob);
+      await ffmpeg.writeFile("input.webm", webmData);
+
+      // Transcode the WebM file to MP4 using FFmpeg
+      await ffmpeg.exec([
+        "-i",
+        "input.webm",
+        "-vf",
+        `scale=${
+          layout.orientation === "vertical"
+            ? `${layoutHeight}:${layoutWidth}`
+            : `${layoutWidth}:${layoutHeight}`
+        }`,
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-crf",
+        "30",
+        "-preset",
+        "ultrafast",
+        "-movflags",
+        "faststart",
+        "output.mp4",
+      ]);
+
+      const mp4Data = await ffmpeg.readFile("output.mp4");
+      const mp4Blob = new Blob([mp4Data.buffer], { type: "video/mp4" });
+      const fileSize = mp4Blob.size;
+      const fileName = `${videoName || "default-video"}.mp4`;
+      let w = 0,
+        h = 0;
+
+      const videoElement = document.createElement("video");
+      videoElement.src = URL.createObjectURL(mp4Blob);
+      await new Promise((resolve) => {
+        videoElement.onloadedmetadata = () => {
+          w = videoElement.videoWidth;
+          h = videoElement.videoHeight;
+          resolve();
+        };
+      });
+
+      const newFile = {
+        width: w,
+        height: h,
+        src: "",
+        scaleX: 1,
+        scaleY: 1,
+        opacity: 1,
+        rotation: 0,
+        animation: null,
+        draggable: true,
+        type: "video",
+        name: fileName,
+        // id: Date.now(),
+      };
+
+      console.log("newFile :>>>", newFile);
+      const fileJSONString = JSON.stringify(newFile);
+      const fileJSON = new Blob([fileJSONString], {
+        type: "application/json",
+      });
+
+      // Creating the form data to upload
+      const formData = new FormData();
+      formData.append("file", mp4Blob, fileName); // Video file
+      formData.append("file_size", fileSize); // Size of the file
+      formData.append("file_json", fileJSON, "file-json.json"); // File JSON metadata
+      formData.append("name", fileName); // Dummy name if not present
+
+      console.log("fileName :>>>>> ", fileName);
+      // Perform the upload request to your server
+      const uploadResponse = await fetch(
+        "https://dev.app.hd2.menu/api/files/store",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`, // Token from localStorage
+          },
+          body: formData,
+        }
+      );
+
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        console.error("Upload failed response:", errorText);
+        throw new Error("File upload failed: " + errorText);
+      }
+
+      const uploadResult = await uploadResponse.json(); // Parse response
+      console.log("Upload Result:", uploadResult);
+
+      alert("File uploaded successfully!");
+    } catch (error) {
+      console.error("Error in uploading file:", error);
+      alert("Error in uploading file");
+    } finally {
+      setisUploading(false); // Re-enable the save button after upload
+    }
   };
 
   // Update the handleDownload function to download recorded video end
-
-  // Use effect to start recording when component mounts start
-  // for high memory usage
-  // This will load FFmpeg once when the component mounts
-  // useEffect(() => {
-  //   const loadFFmpeg = async () => {
-  //     const baseURL = "https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/esm";
-  //     const ffmpeg = ffmpegRef.current;
-
-  //     ffmpeg.on("log", ({ message }) => {
-  //       console.log(`[FFmpeg] ${message}`);
-  //     });
-
-  //     try {
-  //       console.log("Loading FFmpeg in the background...");
-  //       await ffmpeg.load({
-  //         coreURL: await toBlobURL(
-  //           `${baseURL}/ffmpeg-core.js`,
-  //           "text/javascript"
-  //         ),
-  //         wasmURL: await toBlobURL(
-  //           `${baseURL}/ffmpeg-core.wasm`,
-  //           "application/wasm"
-  //         ),
-  //         workerURL: await toBlobURL(
-  //           `${baseURL}/ffmpeg-core.worker.js`,
-  //           "text/javascript"
-  //         ),
-  //       });
-  //       setFfmpegLoaded(true);
-  //       console.log("FFmpeg loaded successfully.");
-  //     } catch (error) {
-  //       console.error("Error loading FFmpeg:", error);
-  //     }
-  //   };
-
-  //   if (!ffmpegLoaded) {
-  //     loadFFmpeg();
-  //   }
-  // }, [ffmpegLoaded]);
 
   // startRecording useEffect
   useEffect(() => {
@@ -387,7 +502,7 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       };
     };
 
-    console.log("debug totalDuration : ", totalDuration);
+    // console.log("debug totalDuration : ", totalDuration);
     if (totalDuration > 0) {
       startRecording(); // Start recording as soon as the total duration is set
     }
@@ -404,7 +519,7 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
 
     useEffect(() => {
       if (!videoSrc) {
-        console.log("No videoSrc provided");
+        // console.log("No videoSrc provided");
         return; // Return early if no video source
       }
 
@@ -547,23 +662,39 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
             style={{ marginRight: "43px" }}
           >
             <button
-              className="w-15 h-15 bg-green-500 px-4 py-2 hover:bg-green-600 text-white cursor-pointer rounded"
+              className={`w-15 h-15 bg-green-500 px-4 py-2 ${
+                isPlaying
+                  ? "cursor-not-allowed bg-gray-400" // Show disabled cursor and gray background
+                  : "hover:bg-green-600 cursor-pointer"
+              } text-white rounded`}
               onClick={handlePlay}
+              disabled={isPlaying} // Disable the button when the video is playing
             >
               <FaPlayCircle className="text-3xl" />
             </button>
+
             <button
-              className="w-15 h-15 px-4 py-2 bg-blue-500 hover:bg-blue-700 text-white cursor-pointer rounded"
+              className={`w-15 h-15 px-4 py-2 ${
+                isDownloading
+                  ? "bg-gray-400 cursor-not-allowed" // Change cursor to 'not-allowed' when downloading
+                  : "bg-blue-500 hover:bg-blue-700 cursor-pointer"
+              } text-white rounded`}
               onClick={handleDownload}
+              disabled={isDownloading} // Disable the button when downloading
             >
               <RiVideoDownloadFill className="text-3xl" />
             </button>
 
             <button
-              className="w-15 h-15 px-4 py-2 bg-blue-500 hover:bg-blue-700 text-white cursor-pointer rounded"
               onClick={handleSaveAndOpenVideo}
+              className={`w-15 h-15 px-4 py-2 ${
+                isUploading
+                  ? "bg-gray-400 cursor-not-allowed" // Change cursor to 'not-allowed' when uploading
+                  : "bg-blue-500 hover:bg-blue-700 cursor-pointer"
+              } text-white rounded`}
+              disabled={isUploading} // Disable the button when uploading
             >
-              <FaExternalLinkAlt className="text-3xl" />
+              <p className="text-xl">save</p>
             </button>
 
             <button
@@ -702,6 +833,16 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
               {formatTime(totalDuration)}
             </span>
           </div>
+
+          {showLogin && (
+            <Login
+              onLogin={() => {
+                setIsLoggedIn(true);
+                setShowLogin(false); // Close the login modal after successful login
+                handleSaveAndOpenVideo(); // Retry save after login
+              }}
+            />
+          )}
         </div>
       </div>
     </div>

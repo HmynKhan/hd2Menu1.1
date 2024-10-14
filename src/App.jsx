@@ -1,15 +1,19 @@
-import { useState, useEffect } from "react";
-// import CustomLayout from "./components/CustomLayout/CustomLayout";
+import { createContext, useState, useEffect } from "react";
 import SaveLayout from "./components/SaveLayout/SaveLayout";
 import ImageGallery from "./components/Image&Gallery/ImageGallery";
 import Timeline from "./components/Timeline/Timeline";
 import VideoForm from "./components/VideoForm/VideoForm";
+
+export const PlaylistContext = createContext();
 
 const App = () => {
   const [layouts, setLayouts] = useState([]);
   const [currentLayout, setCurrentLayout] = useState(null);
   const [currentLayoutIndex, setCurrentLayoutIndex] = useState(null);
 
+  // for playlist name video api code start
+  const [playlistName, setPlaylistName] = useState("");
+  // for playlist name video api code end
   // Load layouts from localStorage on initial render
   useEffect(() => {
     const storedLayouts = JSON.parse(localStorage.getItem("layouts")) || [];
@@ -76,7 +80,7 @@ const App = () => {
   };
 
   return (
-    <div>
+    <PlaylistContext.Provider value={{ playlistName, setPlaylistName }}>
       <h1 className="mt-4 font-bold text-center text-5xl">hd2Menu</h1>
       <VideoForm />
 
@@ -92,7 +96,7 @@ const App = () => {
       />
       <Timeline layout={currentLayout} onCancle={removeloadLayout} />
       <ImageGallery />
-    </div>
+    </PlaylistContext.Provider>
   );
 };
 
