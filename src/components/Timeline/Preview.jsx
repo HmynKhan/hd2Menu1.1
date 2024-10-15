@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
 import { Stage, Rect, Layer, Image } from "react-konva";
 import useImage from "use-image";
-// import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile /*toBlobURL*/ } from "@ffmpeg/util";
 import { AiOutlineClose } from "react-icons/ai";
 import { RiVideoDownloadFill } from "react-icons/ri";
@@ -11,7 +10,6 @@ import Login from "./Login";
 import { getToken } from "../../services/localStorage";
 import { PlaylistContext } from "../../App";
 
-// Utility function to convert seconds to MM:SS format
 const formatTime = (seconds) => {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = Math.floor(seconds % 60);
@@ -70,7 +68,6 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
 
   // in division pause media looping
   const [shouldStopCycling, setShouldStopCycling] = useState(false);
-  const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
 
   // Store recorded chunks in a ref to be accessed later
   const recordedChunksRef = useRef([]);
@@ -741,9 +738,6 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
                   calculateDivisionDuration(mediaItems);
 
                 const [isCycling, setIsCycling] = useState(true); // Start with cycling
-                {
-                  /* console.log(`Cycling state for division ${index}:`, isCycling); // Debugging */
-                }
 
                 // Ensure cycling resets when Play button is pressed
                 useEffect(() => {
@@ -838,8 +832,8 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
             <Login
               onLogin={() => {
                 setIsLoggedIn(true);
-                setShowLogin(false); // Close the login modal after successful login
-                handleSaveAndOpenVideo(); // Retry save after login
+                setShowLogin(false);
+                handleSaveAndOpenVideo();
               }}
             />
           )}

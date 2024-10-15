@@ -1,12 +1,14 @@
 import axios from "axios";
-export const baseURL = "https://api.prismatic-technologies.com.pk";
+
+export const baseURL = "https://dev.app.hd2.menu"; // Base URL updated
+
 const axiosInstance = axios.create({
-  baseURL: `${baseURL}/api`,
+  baseURL: `${baseURL}/api`, // Base URL for API calls
   headers: {
     "Content-Type": "application/json;charset=utf-8",
   },
 });
 
-const request = axiosInstance.request;
+const request = axiosInstance;
 
 export default request;

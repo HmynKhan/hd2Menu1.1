@@ -14,6 +14,8 @@ const VideoForm = () => {
     // setPlaylistNameInput()
   };
 
+  // console.log("true + false :>> ", true + false);
+
   return (
     <form className="p-6 w-full mx-auto bg-#f7f8fa shadow-md rounded-md">
       <div className="flex items-center gap-4 mt-4">

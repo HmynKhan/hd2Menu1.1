@@ -41,7 +41,7 @@ const SaveLayout = ({
       divisions: updatedDivisions, // Use the updated divisions
     };
 
-    const updatedLayouts = [...layouts, updatedLayout];
+    const updatedLayouts = [updatedLayout, ...layouts];
     setLayouts(updatedLayouts);
     localStorage.setItem("layouts", JSON.stringify(updatedLayouts));
     setIsCustomLayoutOpen(false); // Close the modal

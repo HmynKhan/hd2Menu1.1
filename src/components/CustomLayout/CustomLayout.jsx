@@ -3,7 +3,6 @@ import { Stage, Layer, Rect, Transformer } from "react-konva";
 import PopUpMessage from "../PopUpMessage";
 import { IoMdAdd } from "react-icons/io";
 import { FaSave } from "react-icons/fa";
-import { FcDeleteRow } from "react-icons/fc";
 
 const CustomLayout = ({ onSaveLayout }) => {
   const [layoutName, setLayoutName] = useState("");
@@ -507,7 +506,7 @@ const CustomLayout = ({ onSaveLayout }) => {
                     onClick={handleDeleteDivision}
                     className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-700"
                   >
-                    <FcDeleteRow className="text-2xl" />
+                    Remove
                   </button>
                 </div>
               </div>
