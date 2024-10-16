@@ -218,10 +218,6 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
 
   // Custom hook to manage media cycling end
 
-  // Update the handleDownload function to download recorded video start
-
-  // const ffmpegRef = useRef(new FFmpeg());
-
   const handleDownload = async () => {
     if (isDownloading) return;
     setIsDownloading(true);

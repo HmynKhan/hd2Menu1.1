@@ -14,11 +14,4 @@ export default defineConfig({
       "Cross-Origin-Embedder-Policy": "require-corp",
     },
   },
-  build: {
-    rollupOptions: {
-      output: {
-        // Configure any necessary output options here
-      },
-    },
-  },
 });
