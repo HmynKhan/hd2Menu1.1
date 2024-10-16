@@ -223,6 +223,7 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
     setIsDownloading(true);
 
     let ffmpeg = ffmpegInstance;
+
     if (!ffmpeg) {
       ffmpeg = await getFFmpegInstance();
       setFfmpegInstance(ffmpeg); // Save FFmpeg instance for future use

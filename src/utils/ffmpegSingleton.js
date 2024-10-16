@@ -25,6 +25,8 @@ export const getFFmpegInstance = async () => {
           "text/javascript"
         ),
       });
+
+      console.log("debug FFmpeg loaded: ", ffmpegInstance);
       console.log("FFmpeg loaded globally");
     } catch (error) {
       console.error("Error loading FFmpeg:", error);
