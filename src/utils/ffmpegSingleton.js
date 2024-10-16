@@ -7,7 +7,7 @@ export const getFFmpegInstance = async () => {
   if (!ffmpegInstance) {
     // First load, create a new instance
     console.log("Loading FFmpeg...");
-    ffmpegInstance = await new FFmpeg({ log: true });
+    ffmpegInstance = new FFmpeg({ log: true });
 
     const baseURL = "https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/esm";
     try {
