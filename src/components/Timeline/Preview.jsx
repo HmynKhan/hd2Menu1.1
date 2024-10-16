@@ -232,6 +232,11 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       setFfmpegInstance(ffmpeg); // Save FFmpeg instance for future use
     }
 
+    if (!ffmpeg.load()) {
+      setIsDownloading(false);
+      return console.error("FFmpeg instance not loaded");
+    }
+
     if (recordedChunksRef.current.length === 0) {
       alert("No recording available to download!");
       setIsDownloading(false);
