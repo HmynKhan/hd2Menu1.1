@@ -173,7 +173,7 @@ const ImageGallery = () => {
         },
       });
 
-      console.log("API response:", response.data);
+      // console.log("API response:", response.data);
 
       const mediaData = response.data?.data?.data || [];
       const totalPages = response.data?.data?.last_page || 1;

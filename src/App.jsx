@@ -21,11 +21,11 @@ const App = () => {
   }, []);
 
   // Save a new layout and store it in localStorage
-  const saveLayout = (newLayout) => {
-    const updatedLayouts = [...layouts, newLayout];
-    setLayouts(updatedLayouts);
-    localStorage.setItem("layouts", JSON.stringify(updatedLayouts));
-  };
+  // const saveLayout = (newLayout) => {
+  //   const updatedLayouts = [...layouts, newLayout];
+  //   setLayouts(updatedLayouts);
+  //   localStorage.setItem("layouts", JSON.stringify(updatedLayouts));
+  // };
 
   const removeloadLayout = () => {
     setCurrentLayout(null);
@@ -83,8 +83,6 @@ const App = () => {
     <PlaylistContext.Provider value={{ playlistName, setPlaylistName }}>
       <h1 className="mt-4 font-bold text-center text-5xl">hd2Menu</h1>
       <VideoForm />
-
-      {/* <CustomLayout onSaveLayout={saveLayout} /> */}
 
       <SaveLayout
         layouts={layouts}

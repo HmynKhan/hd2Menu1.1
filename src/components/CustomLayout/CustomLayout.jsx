@@ -92,8 +92,6 @@ const CustomLayout = ({ onSaveLayout }) => {
             height: stageHeight,
           };
 
-    console.log("Stage Dimensions to Save:", savedStageDimensions);
-
     // Modify divisions based on orientation
     const savedDivisions = divisions.map((division) => {
       if (orientation === "vertical") {
@@ -117,7 +115,7 @@ const CustomLayout = ({ onSaveLayout }) => {
       }
     });
 
-    console.log("Divisions to Save:", savedDivisions);
+    // console.log("Divisions to Save:", savedDivisions);
 
     // Final layout object to be saved
     const savedLayout = {
