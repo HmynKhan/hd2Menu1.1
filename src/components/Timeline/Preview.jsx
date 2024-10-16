@@ -284,6 +284,8 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       document.body.removeChild(aMp4);
 
       console.log("MP4 download triggered successfully.");
+      console.log(window.crossOriginIsolated);
+
       recordedChunksRef.current = [];
     } catch (error) {
       console.error("Error during transcoding:", error);
