@@ -241,6 +241,8 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
         type: "video/webm",
       });
 
+      console.log(window.crossOriginIsolated);
+
       console.log(`WebM Blob created, size: ${webmBlob.size} bytes`);
 
       const webmData = await fetchFile(webmBlob);
@@ -284,7 +286,6 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
       document.body.removeChild(aMp4);
 
       console.log("MP4 download triggered successfully.");
-      console.log(window.crossOriginIsolated);
 
       recordedChunksRef.current = [];
     } catch (error) {
