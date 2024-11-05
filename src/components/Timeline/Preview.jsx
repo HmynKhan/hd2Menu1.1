@@ -659,15 +659,38 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
             style={{ marginRight: "43px" }}
           >
             <button
-              className={`w-15 h-15 bg-green-500 px-4 py-2 ${
+              className={`w-15 h-15 ${
                 isPlaying
-                  ? "cursor-not-allowed bg-gray-400" // Show disabled cursor and gray background
-                  : "hover:bg-green-600 cursor-pointer"
-              } text-white rounded`}
+                  ? "bg-gray-400 cursor-not-allowed" // Gray background and disabled cursor when loading
+                  : "bg-green-500 hover:bg-green-600 cursor-pointer"
+              } px-4 py-2 text-white rounded`}
               onClick={handlePlay}
               disabled={isPlaying} // Disable the button when the video is playing
             >
-              <FaPlayCircle className="text-3xl" />
+              {isPlaying ? (
+                <svg
+                  className="animate-spin h-5 w-5 text-gray-700" // Gray color for loader icon
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v8z"
+                  ></path>
+                </svg>
+              ) : (
+                <FaPlayCircle className="text-3xl" />
+              )}
             </button>
 
             <button
@@ -679,10 +702,33 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
               onClick={handleDownload}
               disabled={isDownloading} // Disable the button when downloading
             >
-              <RiVideoDownloadFill className="text-3xl" />
+              {isDownloading ? (
+                <svg
+                  className="animate-spin h-5 w-5 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v8z"
+                  ></path>
+                </svg>
+              ) : (
+                <RiVideoDownloadFill className="text-3xl" />
+              )}
             </button>
 
-            <button
+            {/*<button
               onClick={handleSaveAndOpenVideo}
               className={`w-15 h-15 px-4 py-2 ${
                 isUploading
@@ -692,6 +738,41 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
               disabled={isUploading} // Disable the button when uploading
             >
               <p className="text-xl">save</p>
+            </button>*/}
+
+            <button
+              onClick={handleSaveAndOpenVideo}
+              className={`w-15 h-15 px-4 py-2 ${
+                isUploading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-500 hover:bg-blue-700 cursor-pointer"
+              } text-white rounded flex items-center justify-center`} // Flex to center content
+              disabled={isUploading} // Disable the button when uploading
+            >
+              {isUploading ? (
+                <svg
+                  className="animate-spin h-5 w-5 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v8z"
+                  ></path>
+                </svg>
+              ) : (
+                <p className="text-xl">Save</p>
+              )}
             </button>
 
             <button
