@@ -17,10 +17,18 @@ const CustomLayout = ({ onSaveLayout }) => {
   });
   const [message, setMessage] = useState({ text: "", type: "" });
   const [resolution, setResolution] = useState("hd");
-  const [orientation, setOrientation] = useState("horizontal"); // default to horizontal
-
+  const [orientation, setOrientation] = useState("horizontal");
   const stageWidth = 400;
   const stageHeight = 300;
+
+  const resolutionMapping = {
+    hd: { width: 1280, height: 720 },
+    fullhd: { width: 1920, height: 1080 },
+    fourk: { width: 3840, height: 2160 },
+  };
+
+
+  const scaleFactor = resolutionMapping[resolution].height / stageHeight; // Scale height to the resolution
 
   const [stageDimensions, setStageDimensions] = useState({
     width: stageWidth, // Horizontal width
@@ -51,16 +59,35 @@ const CustomLayout = ({ onSaveLayout }) => {
   };
 
   const handleAddDivision = () => {
+    const maxHeight = resolutionMapping[resolution].height;
+    const maxWidth = resolutionMapping[resolution].width;
+
+    // Default size for the new division
+    let newWidth, newHeight;
+
+    if (orientation === "vertical") {
+      // For vertical, swap width and height based on resolution
+      newWidth = Math.min(maxHeight / 2, stageHeight);
+      newHeight = Math.min(maxWidth / 2, stageWidth);
+    } else {
+      // For horizontal, default width and height
+      newWidth = Math.min(maxWidth / 2, stageWidth);
+      newHeight = Math.min(maxHeight / 2, stageHeight);
+    }
+
     const newDivision = {
       x: 0,
       y: 0,
-      width: orientation === "vertical" ? 150 : 200, // Swap width and height for vertical orientation
-      height: orientation === "vertical" ? 200 : 150, // Adjust for vertical or horizontal
+      width: newWidth / 2,
+      height: newHeight / 2,
       fill: generateUniqueColor(divisions.length),
       id: `rect-${divisions.length + 1}`,
     };
+
     setDivisions((prevDivisions) => [...prevDivisions, newDivision]);
   };
+
+
 
   // i want to change for divison not in vertical
   const handleSaveLayout = () => {
@@ -84,13 +111,13 @@ const CustomLayout = ({ onSaveLayout }) => {
     const savedStageDimensions =
       orientation === "vertical"
         ? {
-            width: stageHeight, // Swap stage width and height for vertical
-            height: stageWidth,
-          }
+          width: stageHeight, // Swap stage width and height for vertical
+          height: stageWidth,
+        }
         : {
-            width: stageWidth, // Keep as is for horizontal
-            height: stageHeight,
-          };
+          width: stageWidth, // Keep as is for horizontal
+          height: stageHeight,
+        };
 
     // Modify divisions based on orientation
     const savedDivisions = divisions.map((division) => {
@@ -190,12 +217,10 @@ const CustomLayout = ({ onSaveLayout }) => {
     });
   };
 
-  const handleDeleteDivision = () => {
-    if (selectedDivisionIndex !== null) {
-      const updatedDivisions = divisions.filter(
-        (_, index) => index !== selectedDivisionIndex
-      );
-      setDivisions(updatedDivisions);
+  const handleDeleteDivision = (index) => {
+    const updatedDivisions = divisions.filter((_, i) => i !== index);
+    setDivisions(updatedDivisions);
+    if (selectedDivisionIndex === index) {
       setSelectedDivisionIndex(null);
       setDivisionDetails({ x: "", y: "", width: "", height: "" });
     }
@@ -212,26 +237,19 @@ const CustomLayout = ({ onSaveLayout }) => {
       let newWidth = shape.width() * shape.scaleX();
       let newHeight = shape.height() * shape.scaleY();
 
-      // Check if the orientation is vertical and adjust width/height and x/y accordingly
-      const currentStageWidth =
-        orientation === "vertical" ? stageHeight : stageWidth;
-      const currentStageHeight =
-        orientation === "vertical" ? stageWidth : stageHeight;
+      const maxHeight = resolutionMapping[resolution].height; // Maximum allowed height
+      const maxWidth = resolutionMapping[resolution].width;  // Maximum allowed width
 
-      const constrainedWidth = Math.min(newWidth, currentStageWidth - newX);
-      const constrainedHeight = Math.min(newHeight, currentStageHeight - newY);
+      // Ensure width and height stay within the resolution's boundaries
+      const constrainedWidth = Math.min(newWidth, maxWidth - newX);
+      const constrainedHeight = Math.min(newHeight, maxHeight - newY);
 
-      const constrainedX = Math.max(
-        0,
-        Math.min(newX, currentStageWidth - constrainedWidth)
-      );
-      const constrainedY = Math.max(
-        0,
-        Math.min(newY, currentStageHeight - constrainedHeight)
-      );
+      // Ensure x and y stay within the resolution's boundaries
+      const constrainedX = Math.max(0, Math.min(newX, maxWidth - constrainedWidth));
+      const constrainedY = Math.max(0, Math.min(newY, maxHeight - constrainedHeight));
 
-      shape.width(constrainedWidth);
-      shape.height(constrainedHeight);
+      shape.width(constrainedWidth / shape.scaleX());
+      shape.height(constrainedHeight / shape.scaleY());
       shape.scaleX(1);
       shape.scaleY(1);
       shape.x(constrainedX);
@@ -259,14 +277,14 @@ const CustomLayout = ({ onSaveLayout }) => {
   const handleOrientationChange = (newOrientation) => {
     setOrientation(newOrientation);
 
+    const currentResolution = resolutionMapping[resolution];
+
     if (newOrientation === "vertical") {
-      // Swap stage width and height for vertical orientation
       setStageDimensions({
-        width: stageHeight, // Portrait (height > width)
+        width: stageHeight,
         height: stageWidth,
       });
 
-      // Swap each division's width, height, x, and y for vertical orientation
       setDivisions((prevDivisions) =>
         prevDivisions.map((division) => ({
           ...division,
@@ -276,14 +294,20 @@ const CustomLayout = ({ onSaveLayout }) => {
           height: division.width,
         }))
       );
+
+      setDivisionDetails((prevDetails) => ({
+        ...prevDetails,
+        x: prevDetails.y, // Swap x and y in details
+        y: prevDetails.x,
+        width: prevDetails.height, // Swap width and height in details
+        height: prevDetails.width,
+      }));
     } else {
-      // Swap back to horizontal
       setStageDimensions({
-        width: stageWidth, // Landscape (width > height)
+        width: stageWidth,
         height: stageHeight,
       });
 
-      // Swap back the divisions' width, height, x, and y for horizontal orientation
       setDivisions((prevDivisions) =>
         prevDivisions.map((division) => ({
           ...division,
@@ -293,21 +317,28 @@ const CustomLayout = ({ onSaveLayout }) => {
           height: division.width,
         }))
       );
+
+      setDivisionDetails((prevDetails) => ({
+        ...prevDetails,
+        x: prevDetails.y, // Swap x and y back in details
+        y: prevDetails.x,
+        width: prevDetails.height, // Swap width and height back in details
+        height: prevDetails.width,
+      }));
     }
   };
 
-  const handleDivisionChange = (property, value) => {
-    const updatedDivisions = [...divisions];
-    updatedDivisions[selectedDivisionIndex] = {
-      ...updatedDivisions[selectedDivisionIndex],
-      [property]: parseFloat(value), // Update the specific property (x, y, width, height)
-    };
 
+
+
+
+  const handleDivisionChange = (index, property, value) => {
+    const updatedDivisions = [...divisions];
+    updatedDivisions[index] = {
+      ...updatedDivisions[index],
+      [property]: parseFloat(value),
+    };
     setDivisions(updatedDivisions);
-    setDivisionDetails({
-      ...divisionDetails,
-      [property]: value, // Update the division details to reflect changes in the UI
-    });
   };
 
   const handleStageClick = (event) => {
@@ -386,7 +417,7 @@ const CustomLayout = ({ onSaveLayout }) => {
         {/* Layout */}
         <div className="flex items-center justify-center mb-2">
           <div
-            className="border-2 border-black"
+            className="border border-black"
             ref={layoutRef}
             style={{
               width: `${stageDimensions.width}px`,
@@ -451,57 +482,61 @@ const CustomLayout = ({ onSaveLayout }) => {
           </button>
         </div>
 
-        {/* Division Controller */}
-        {selectedDivisionIndex !== null && (
-          <div className="flex items-center justify-center mb-4">
-            <div className="border-2 border-gray-300 rounded w-full max-w-3xl px-3 py-1">
+        {/* Division Controllers */}
+        <div className="flex flex-col items-center mb-4 gap-4">
+          {divisions.map((division, index) => (
+            <div
+              key={division.id}
+              className={`border-2 ${selectedDivisionIndex === index ? "border-blue-500" : "border-gray-300"
+                } rounded w-full max-w-3xl px-3 py-2`}
+            >
               <div className="flex flex-wrap items-center gap-3 text-xs">
                 <h2 className="text-md font-semibold">
-                  Division {selectedDivisionIndex + 1}
+                  Division {index + 1} {selectedDivisionIndex === index && "(Selected)"}
                 </h2>
-                <div className="flex items-center gap-1">
-                  <label className="font-semibold">x:</label>
-                  <input
-                    type="number"
-                    value={divisionDetails.x}
-                    onChange={(e) => handleDivisionChange("x", e.target.value)}
-                    className="border rounded px-1 py-1 w-12"
-                  />
-                </div>
                 <div className="flex items-center gap-1">
                   <label className="font-semibold">y:</label>
                   <input
                     type="number"
-                    value={divisionDetails.y}
-                    onChange={(e) => handleDivisionChange("y", e.target.value)}
+                    value={division.y}
+                    onChange={(e) => handleDivisionChange(index, "y", e.target.value)}
                     className="border rounded px-1 py-1 w-12"
                   />
                 </div>
+                <div className="flex items-center gap-1">
+                  <label className="font-semibold">x:</label>
+                  <input
+                    type="number"
+                    value={division.x}
+                    onChange={(e) => handleDivisionChange(index, "x", e.target.value)}
+                    className="border rounded px-1 py-1 w-12"
+                  />
+                </div>
+                {/* Proportional Width */}
                 <div className="flex items-center gap-1">
                   <label className="font-semibold">Width:</label>
-                  <input
-                    type="number"
-                    value={divisionDetails.width}
-                    onChange={(e) =>
-                      handleDivisionChange("width", e.target.value)
-                    }
-                    className="border rounded px-1 py-1 w-12"
-                  />
+                  <span className="text-sm">
+                    {orientation === "vertical"
+                      ? Math.round((division.height / stageWidth) * resolutionMapping[resolution].height)
+                      : Math.round((division.width / stageWidth) * resolutionMapping[resolution].width)}
+                  </span>
                 </div>
+
+                {/* Proportional Height */}
                 <div className="flex items-center gap-1">
                   <label className="font-semibold">Height:</label>
-                  <input
-                    type="number"
-                    value={divisionDetails.height}
-                    onChange={(e) =>
-                      handleDivisionChange("height", e.target.value)
-                    }
-                    className="border rounded px-1 py-1 w-12"
-                  />
+                  <span className="text-sm">
+                    {orientation === "vertical"
+                      ? Math.round((division.width / stageHeight) * resolutionMapping[resolution].width)
+                      : Math.round((division.height / stageHeight) * resolutionMapping[resolution].height)}
+                  </span>
                 </div>
+
+
+                {/* Delete Button */}
                 <div className="flex items-center ml-auto">
                   <button
-                    onClick={handleDeleteDivision}
+                    onClick={() => handleDeleteDivision(index)}
                     className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-700"
                   >
                     Remove
@@ -509,8 +544,9 @@ const CustomLayout = ({ onSaveLayout }) => {
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          ))}
+        </div>
+
       </div>
 
       {/* Popup Message */}
