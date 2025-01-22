@@ -1,3 +1,5 @@
+/* eslint-disable react/prop-types */
+/* eslint-disable no-unused-vars */
 import React, { useState, useRef, useEffect } from "react";
 import { Stage, Layer, Rect, Transformer } from "react-konva";
 import PopUpMessage from "../PopUpMessage";
@@ -28,7 +30,8 @@ const CustomLayout = ({ onSaveLayout }) => {
   };
 
 
-  const scaleFactor = resolutionMapping[resolution].height / stageHeight; // Scale height to the resolution
+  // const scaleFactor = resolutionMapping[resolution].height / stageHeight; // Scale height to the resolution
+  const scaleFactor = resolutionMapping[resolution].width / stageWidth; // Scale width properly
 
   const [stageDimensions, setStageDimensions] = useState({
     width: stageWidth, // Horizontal width
@@ -90,11 +93,11 @@ const CustomLayout = ({ onSaveLayout }) => {
 
 
   // i want to change for divison not in vertical
-  const handleSaveLayout = () => {
+  const handleSaveLayout = async () => {
     console.log("Saving Layout...");
     console.log("Current Orientation:", orientation);
     console.log("Current Resolution:", resolution);
-
+  
     if (!layoutName) {
       setMessage({ text: "Layout name cannot be empty.", type: "error" });
       return;
@@ -106,66 +109,77 @@ const CustomLayout = ({ onSaveLayout }) => {
       });
       return;
     }
-
-    // Check the orientation and swap width and height if vertical
-    const savedStageDimensions =
-      orientation === "vertical"
-        ? {
-          width: stageHeight, // Swap stage width and height for vertical
-          height: stageWidth,
-        }
-        : {
-          width: stageWidth, // Keep as is for horizontal
-          height: stageHeight,
-        };
-
-    // Modify divisions based on orientation
-    const savedDivisions = divisions.map((division) => {
-      if (orientation === "vertical") {
-        return {
-          x: division.y, // Swap x and y for vertical
-          y: division.x,
-          width: division.height, // Swap width and height for vertical
-          height: division.width,
-          fill: division.fill,
-          id: division.id,
-        };
-      } else {
-        return {
-          x: division.x,
-          y: division.y,
-          width: division.width,
-          height: division.height,
-          fill: division.fill,
-          id: division.id,
-        };
+  
+    const savedStageDimensions = orientation === "horizontal"
+    ? {
+        width: resolutionMapping[resolution].width,
+        height: resolutionMapping[resolution].height,
       }
-    });
-
-    // console.log("Divisions to Save:", savedDivisions);
-
-    // Final layout object to be saved
+    : {
+        width: resolutionMapping[resolution].height, // Swap for vertical
+        height: resolutionMapping[resolution].width, // Swap for vertical
+      };
+  
+      
     const savedLayout = {
       name: layoutName,
-      resolution, // Save the selected resolution
-      orientation, // Save the current orientation
-      stageDimensions: savedStageDimensions, // Save swapped layout dimensions
-      divisions: savedDivisions, // Save divisions with swapped properties for vertical
+      stageDimensions: savedStageDimensions,
+      orientation: orientation,
+      created_by: "1",
+      divisions: divisions.map((division) => {
+        return orientation === "horizontal"
+  ? {
+      x: (division.x / stageWidth) * resolutionMapping[resolution].width,
+      y: (division.y / stageHeight) * resolutionMapping[resolution].height,
+      width: (division.width / stageWidth) * resolutionMapping[resolution].width,
+      height: (division.height / stageHeight) * resolutionMapping[resolution].height,
+      fill: division.fill,
+      id: division.id,
+    }
+  : {
+      x: (division.x / stageHeight) * resolutionMapping[resolution].height, // Adjust for vertical
+      y: (division.y / stageWidth) * resolutionMapping[resolution].width, // Adjust for vertical
+      width: (division.width / stageHeight) * resolutionMapping[resolution].height, // Adjust width
+      height: (division.height / stageWidth) * resolutionMapping[resolution].width, // Adjust height
+      fill: division.fill,
+      id: division.id,
     };
 
-    console.log("Final Layout Object to Save:", orientation, savedLayout);
-
-    // Call the parent onSaveLayout function to save the layout
-    onSaveLayout(savedLayout);
-
-    // Reset the state after saving
-    setMessage({ text: "Layout saved successfully!", type: "success" });
-    setLayoutName("");
-    setDivisions([]);
-    setSelectedDivisionIndex(null);
-    setDivisionDetails({ x: "", y: "", width: "", height: "" });
-    setResolution("hd");
+      }),
+    };
+      
+    console.log("Final Layout Object to Save:", savedLayout);
+  
+    try {
+      const response = await fetch("https://dev.app.hd2.menu/api/store-layout-value", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(savedLayout),
+      });
+  
+      if (!response.ok) {
+        throw new Error("Failed to save layout");
+      }
+  
+      const data = await response.json();
+      console.log("Response:", data);
+  
+      setMessage({ text: "Layout saved successfully!", type: "success" });
+  
+      // Reset state
+      setLayoutName("");
+      setDivisions([]);
+      setSelectedDivisionIndex(null);
+      setDivisionDetails({ x: "", y: "", width: "", height: "" });
+      setResolution("hd");
+    } catch (error) {
+      console.error("Error saving layout:", error);
+      setMessage({ text: "Failed to save layout. Please try again.", type: "error" });
+    }
   };
+  
 
   const handleDragMove = (index, event) => {
     const shape = event.target;

@@ -1,3 +1,8 @@
+/* eslint-disable no-undef */
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/rules-of-hooks */
+/* eslint-disable no-unused-vars */
+/* eslint-disable react/prop-types */
 import React, { useState, useEffect, useRef, useContext } from "react";
 import { Stage, Rect, Layer, Image } from "react-konva";
 import useImage from "use-image";
@@ -43,6 +48,8 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
   };
 
   const selectedResolution = layout.resolution || "hd"; // Default to full HD
+
+  console.log(layout?.orientation, 'layout?.orientation');
   //  i want to change in code for v orientation
   const { width: layoutWidth, height: layoutHeight } =
     resolutionMap[selectedResolution];
@@ -562,9 +569,21 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
   };
   // to render video in canva end
 
+  const previewWidth = 1200;  // Fixed preview width
+const scaleFactor = layout.width / previewWidth; // Scale based on real resolution
+console.log("scaleFactor",scaleFactor)
+const stageWidth = layout.orientation === "vertical" 
+  ? layout.height / 1.8  // Adjust for vertical
+  : layout.width / 1.8;
+
+const stageHeight = layout.orientation === "vertical" 
+  ? layout.width / 1.8  // Adjust for vertical
+  : layout.height / 1.8;
+
+
   // for layout orientation for h or v
-  const scaleX = layoutWidth / 400; // Calculate scaling factor for width
-  const scaleY = layoutHeight / 300; // Calculate scaling factor for height
+const scaleX = stageWidth / layout.width;  // Adjust X based on scaled width
+const scaleY = stageHeight / layout.height; // Adjust Y based on scaled height
   const extraPadding = 130; // Add padding to fit the icons/buttons
 
   // Modify layout dimensions based on orientation
@@ -581,10 +600,10 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
 
   useEffect(() => {
     // Check for resolution and apply zoom based on the orientation and selected resolution
-    if (layout.orientation === "vertical") {
+    if (layout.orientation === "portrait") {
       if (selectedResolution === "hd") {
         // alert("Vhd V orientation");
-        document.body.style.zoom = "40%"; // Apply 50% zoom for vertical 720p layout
+        document.body.style.zoom = "65%"; // Apply 50% zoom for vertical 720p layout
       } else if (selectedResolution === "fullhd") {
         document.body.style.zoom = "27%"; // Apply 50% zoom for vertical 1080p layout
       } else if (selectedResolution === "fourk") {
@@ -593,7 +612,7 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
     } else {
       // For horizontal layouts, keep the original zoom logic
       if (selectedResolution === "hd") {
-        document.body.style.zoom = "67%"; // Set zoom to 67% for horizontal 720p
+        document.body.style.zoom = "70%"; // Set zoom to 67% for horizontal 720p
       } else if (selectedResolution === "fullhd") {
         document.body.style.zoom = "45%"; // Set zoom to 45% for horizontal 1080p
       } else if (selectedResolution === "fourk") {
@@ -632,15 +651,14 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
         height: "100%", // Take full height of the screen
       }}
     >
-      <div
-        className="bg-white p-5  rounded"
-        style={{
-          width: modifiedLayoutWidth + extraPadding + "px",
-          height: modifiedLayoutHeight + extraPadding + "px",
-          backgroundColor: "#F3E5AB",
-        }}
-        // style={{ paddingBottom: "20px", backgroundColor: "skyblue" }}
-      >
+<div
+  className="bg-white p-5  rounded"
+  style={{
+    width: layout.orientation === "portrait" ? "880px" : "1220px",
+    height: layout.orientation === "portrait" ? "850px" : "600px",
+    backgroundColor: "#F3E5AB",
+  }}
+>
         <div className="flex justify-between items-center mb-4">
           <h1
             className="text-2xl font-bold"
@@ -791,15 +809,11 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
           ref={layoutRef}
           className="flex items-center justify-center mb-2 flex-col gap-1"
         >
-          <Stage
-            width={
-              layout.orientation === "vertical" ? layoutHeight : layoutWidth
-            } // Swap for vertical
-            height={
-              layout.orientation === "vertical" ? layoutWidth : layoutHeight
-            } // Swap for vertical
-            style={{ border: "3px solid black", backgroundColor: "white" }}
-          >
+<Stage
+  width={stageWidth}
+  height={stageHeight}
+  style={{ border: "3px solid black", backgroundColor: "white" }}
+>
             <Layer ref={layerRef}>
               <Rect
                 x={0}
@@ -855,19 +869,18 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
                 const currentMedia = mediaItems[currentMediaIndex];
                 const [image] = useImage(currentMedia?.mediaSrc, "anonymous");
 
-                let divisionX = d?.x * scaleX;
-                let divisionY = d?.y * scaleY;
-                let divisionWidth = d?.width * scaleX;
-                let divisionHeight = d?.height * scaleY;
+                let divisionX = d.x * scaleX;
+let divisionY = d.y * scaleY;
+let divisionWidth = d.width * scaleX;
+let divisionHeight = d.height * scaleY;
 
                 // Swap width and height if layout is in vertical orientation
                 if (layout.orientation === "vertical") {
-                  divisionX = d?.y * scaleY; // Swap X and Y positions
-                  divisionY = d?.x * scaleX;
-                  divisionWidth = d?.height * scaleY; // Swap width and height
-                  divisionHeight = d?.width * scaleX;
-                }
-
+  divisionX = d.y * scaleY; // Swap X and Y
+  divisionY = d.x * scaleX;
+  divisionWidth = d.height * scaleY; // Swap width and height
+  divisionHeight = d.width * scaleX;
+}
                 return (
                   <React.Fragment key={index}>
                     {isCycling && (
@@ -879,10 +892,10 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
                             : image
                         }
                         crossOrigin="anonymous"
-                        x={divisionX} // Use modified x
-                        y={divisionY} // Use modified y
-                        width={divisionWidth} // Use modified width
-                        height={divisionHeight} // Use modified height
+                        x={divisionX}  // Use modified x
+  y={divisionY}  // Use modified y
+  width={divisionWidth}  // Use modified width
+  height={divisionHeight}  // Use modified height
                       />
                     )}
                   </React.Fragment>
@@ -893,7 +906,11 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
 
           {/* Progress bar */}
           <div className="relative w-full mb-4 flex justify-center items-center">
-            <div className="bg-gray-300 h-2 rounded" style={{ width: "85%" }}>
+          <div
+  className="bg-gray-300 h-2 rounded"
+  style={{ width: "60%" }}
+>
+
               <div
                 className="bg-green-500 h-full rounded"
                 style={{ width: `${progress}%` }}
