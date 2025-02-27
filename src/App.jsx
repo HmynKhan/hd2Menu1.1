@@ -3,6 +3,7 @@ import SaveLayout from "./components/SaveLayout/SaveLayout";
 import ImageGallery from "./components/Image&Gallery/ImageGallery";
 import Timeline from "./components/Timeline/Timeline";
 import VideoForm from "./components/VideoForm/VideoForm";
+import PopUpMessage from "./components/PopUpMessage";
 
 export const PlaylistContext = createContext();
 
@@ -10,6 +11,7 @@ const App = () => {
   const [layouts, setLayouts] = useState([]);
   const [currentLayout, setCurrentLayout] = useState(null);
   const [currentLayoutIndex, setCurrentLayoutIndex] = useState(null);
+  const [message, setMessage] = useState({ text: "", type: "" });
 
   // for playlist name video api code start
   const [playlistName, setPlaylistName] = useState("");
@@ -31,18 +33,56 @@ const App = () => {
     setCurrentLayout(null);
     setCurrentLayoutIndex(null);
   };
-  // Modify deleteLayout function
-  const deleteLayout = (layoutIndex) => {
-    const updatedLayouts = layouts.filter((_, index) => index !== layoutIndex);
-    setLayouts(updatedLayouts);
-    localStorage.setItem("layouts", JSON.stringify(updatedLayouts));
 
-    // If the deleted layout is the current one, clear the current layout
-    if (layoutIndex === currentLayoutIndex) {
-      removeloadLayout();
+
+  const fetchLayouts = async () => {
+    try {
+      const response = await fetch("https://dev.app.hd2.menu/api/layouts");
+      setLayouts(response.data.data); // Update state with fresh data
+    } catch (error) {
+      console.error("Error fetching layouts:", error);
     }
   };
 
+  
+  // Modify deleteLayout function
+  const deleteLayout = async (layoutId) => {
+    if (!layoutId) {
+      setMessage({ text: "Invalid layout ID", type: "error" });
+      return;
+    }
+  
+    try {
+      const response = await fetch(`https://dev.app.hd2.menu/api/delete-layout-value/${layoutId}`, {
+        method: "DELETE",
+      });
+  
+      if (!response.ok) {
+        throw new Error("Failed to delete layout from server");
+      }
+  
+      console.log(`Layout with ID ${layoutId} deleted successfully`);
+  
+      setMessage({ text: "Layout deleted successfully!", type: "success" });
+  
+      // Fetch updated layouts after deletion
+      await fetchLayouts(); 
+  
+      if (currentLayout && currentLayout.id === layoutId) {
+        removeloadLayout();
+      }
+
+      setTimeout(() => setMessage({ text: "", type: "" }), 3000); // Hide message after 3 sec
+
+    } catch (error) {
+      console.error("Error deleting layout:", error);
+      setMessage({ text: "Failed to delete layout. Please try again.", type: "error" });
+    }
+  
+
+    setTimeout(() => setMessage({ text: "", type: "" }), 3000);
+  };
+        
   // Load a layout by setting it as the current layout
   const loadLayout = (layoutIndex) => {
     const selectedLayout = layouts[layoutIndex];
@@ -91,9 +131,19 @@ const App = () => {
         currentLayoutIndex={currentLayoutIndex}
         setLayouts={setLayouts}
         onCancle={removeloadLayout}
+        fetchLayouts={fetchLayouts}
+
       />
       <Timeline layout={currentLayout} onCancle={removeloadLayout} />
       <ImageGallery />
+      {message.text && (
+        <PopUpMessage
+          message={message.text}
+          type={message.type}
+          onClose={() => setMessage({ text: "", type: "" })}
+        />
+      )}
+
     </PlaylistContext.Provider>
   );
 };

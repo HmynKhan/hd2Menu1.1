@@ -4,10 +4,12 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useState } from "react";
 import { Stage, Layer, Rect } from "react-konva";
-// import { RiDeleteBin2Fill } from "react-icons/ri";
+import { RiDeleteBin2Fill } from "react-icons/ri";
 import { IoMdAdd } from "react-icons/io";
 import CustomLayout from "../CustomLayout/CustomLayout";
 import { IoCloseSharp } from "react-icons/io5";
+import PopUpMessage from "../PopUpMessage";
+
 
 const SaveLayout = ({
   layouts,
@@ -19,6 +21,58 @@ const SaveLayout = ({
 }) => {
   // Step 1: Add state to control the modal visibility
   const [isCustomLayoutOpen, setIsCustomLayoutOpen] = useState(false);
+  const [editingLayout, setEditingLayout] = useState(null); // Store layout being edited
+  const [message, setMessage] = useState({ text: "", type: "" });
+
+
+
+  // i want to change for vertical 2nd time
+  const fetchLayouts = async () => {
+    try {
+      const response = await fetch("https://dev.app.hd2.menu/api/layouts");
+      if (!response.ok) {
+        throw new Error("Failed to fetch layouts");
+      }
+      const data = await response.json();
+
+      const formattedLayouts = data.data.map((layout) => ({
+        id: layout.id,
+        name: layout.name,
+        width: layout.width,
+        height: layout.height,
+        orientation: layout.layout, 
+divisions: JSON.parse(layout.divisions || "[]"),
+
+      }));
+      
+
+      setLayouts(formattedLayouts);
+    } catch (error) {
+      console.error("Error fetching layouts:", error);
+    }
+  };
+
+
+  const handleEditLayout = async (layoutId) => {
+    try {
+      const response = await fetch(`https://dev.app.hd2.menu/api/edit-layout-value/${layoutId}`);
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch layout details");
+      }
+  
+      const data = await response.json();
+      setEditingLayout({
+        ...data.data, 
+        divisions: JSON.parse(data.data.divisions || "[]") 
+      });
+            
+      setIsCustomLayoutOpen(true); // Open CustomLayout modal
+    } catch (error) {
+      console.error("Error fetching layout for editing:", error);
+    }
+  };
+  
 
   // Function to handle opening the custom layout modal
   const handleAddCustomLayout = () => {
@@ -49,34 +103,14 @@ const SaveLayout = ({
     setLayouts(updatedLayouts);
     setIsCustomLayoutOpen(false); 
 
-    await fetchLayouts(); 
+    setMessage({ text: "Layout created successfully!", type: "success" });
+
+    await fetchLayouts(); // Fetch updated layouts
+  
+    setTimeout(() => setMessage({ text: "", type: "" }), 3000); // Hide message after 3 sec
 
   };
 
-// i want to change for vertical 2nd time
-  const fetchLayouts = async () => {
-    try {
-      const response = await fetch("https://dev.app.hd2.menu/api/layouts");
-      if (!response.ok) {
-        throw new Error("Failed to fetch layouts");
-      }
-      const data = await response.json();
-
-      const formattedLayouts = data.data.map((layout) => ({
-        id: layout.id,
-        name: layout.name,
-        width: layout.width,
-        height: layout.height,
-        orientation: layout.layout, 
-        divisions: JSON.parse(layout.divisions),
-      }));
-      
-
-      setLayouts(formattedLayouts);
-    } catch (error) {
-      console.error("Error fetching layouts:", error);
-    }
-  };
 
   // Fetch layouts from API
   useEffect(() => {
@@ -84,6 +118,38 @@ const SaveLayout = ({
 
     fetchLayouts();
   }, []);
+
+  const handleUpdateLayout = async (updatedLayout) => {
+    if (!updatedLayout || !updatedLayout.id) return;
+  
+    try {
+      const response = await fetch(`https://dev.app.hd2.menu/api/update-layout-value/${updatedLayout.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedLayout),
+      });
+  
+      if (!response.ok) {
+        throw new Error("Failed to update layout");
+      }
+  
+      const data = await response.json();
+      console.log("Updated Layout:", data);
+      
+      setEditingLayout(null); // Clear editing state
+      setIsCustomLayoutOpen(false); // Close modal
+
+      setMessage({ text: "Layout updated successfully!", type: "success" });
+
+      await fetchLayouts(); // Refresh list after update
+
+      setTimeout(() => setMessage({ text: "", type: "" }), 3000); // Hide message after 3 sec
+
+    } catch (error) {
+      console.error("Error updating layout:", error);
+    }
+  };
+  
 
   return (
     <div className="p-2">
@@ -174,17 +240,31 @@ const scaledHeight = division.height / scaleFactor;
                     </div>
                   </div>
 
-                  {/* <div className="flex gap-2">
+                  <div className="flex gap-2 mt-2">
                     <button
                       className="bg-red-500 hover:bg-red-700 text-white text-xs px-1 py-1 rounded"
-                      onClick={() => {
-                        onDeleteLayout(layoutIndex);
-                        onCancle();
-                      }}
+                      onClick={async () => {
+  if (layout?.id) {
+    await onDeleteLayout(layout.id);
+    await fetchLayouts(); 
+    onCancle();
+  } else {
+    console.error("Layout ID is undefined");
+  }
+}}
+
+
                     >
                       <RiDeleteBin2Fill className="text-xl" />
                     </button>
-                  </div> */}
+                    <button
+  className="bg-green-500 hover:bg-green-700 text-white text-xs px-1 py-1 rounded"
+  onClick={() => handleEditLayout(layout.id)}
+>
+  Edit
+</button>
+
+                  </div>
                 </div>
               );
             })}
@@ -203,10 +283,25 @@ const scaledHeight = division.height / scaleFactor;
               <IoCloseSharp className="text-3xl" />
             </button>
             {/* i want to change for device orientation */}
-            <CustomLayout  onSaveLayout={handleSaveNewLayout} /> {/* Pass save function */}
+            <CustomLayout 
+  onSaveLayout={handleSaveNewLayout} 
+  editingLayout={editingLayout} 
+  onUpdateLayout={handleUpdateLayout} 
+/>
+
           </div>
         </div>
       )}
+
+            {/* Popup Message */}
+            {message.text && (
+        <PopUpMessage
+          message={message.text}
+          type={message.type}
+          onClose={() => setMessage({ text: "", type: "" })}
+        />
+      )}
+
     </div>
   );
 };

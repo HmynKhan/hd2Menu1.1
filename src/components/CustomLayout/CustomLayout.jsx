@@ -6,7 +6,9 @@ import PopUpMessage from "../PopUpMessage";
 import { IoMdAdd } from "react-icons/io";
 import { FaSave } from "react-icons/fa";
 
-const CustomLayout = ({ onSaveLayout }) => {
+const CustomLayout = ({ onSaveLayout, editingLayout, onUpdateLayout }) => {
+
+  console.log("editingLayout",editingLayout);
   const [layoutName, setLayoutName] = useState("");
   const [divisions, setDivisions] = useState([]);
   const [selectedDivisionIndex, setSelectedDivisionIndex] = useState(null);
@@ -47,11 +49,57 @@ const CustomLayout = ({ onSaveLayout }) => {
       const timer = setTimeout(() => {
         setMessage({ text: "", type: "" });
       }, 3000);
-
       return () => clearTimeout(timer);
     }
-  }, [message]);
+  
+    if (editingLayout) {
+      setLayoutName(editingLayout.name || "");
+      // setResolution(editingLayout.width === 1920 ? "fullhd" : editingLayout.width === 1280 ? "hd" : "fourk");
+      // setOrientation(editingLayout.layout === "landscape" ? "horizontal" : "vertical");
 
+      const isVertical = editingLayout.layout === "portrait";
+
+setResolution(
+  isVertical
+    ? (editingLayout.height === 1920 ? "fullhd" : editingLayout.height === 1280 ? "hd" : "fourk")
+    : (editingLayout.width === 1920 ? "fullhd" : editingLayout.width === 1280 ? "hd" : "fourk")
+);
+
+setOrientation(isVertical ? "vertical" : "horizontal");
+
+// Set correct stage dimensions
+setStageDimensions({
+  width: isVertical ? stageHeight : stageWidth,
+  height: isVertical ? stageWidth : stageHeight,
+});
+
+
+    
+      // Convert layout divisions to fit within stage
+      const stageWidth1 = 400;
+      const stageHeight1 = 300;
+
+      const scaleFactorX = isVertical
+        ? stageHeight1 / editingLayout.width
+        : stageWidth1 / editingLayout.width;
+      
+      const scaleFactorY = isVertical
+        ? stageWidth1 / editingLayout.height
+        : stageHeight1 / editingLayout.height;
+          
+        setDivisions(
+          editingLayout.divisions.map(division => ({
+            ...division,
+            x: division.x * scaleFactorX,
+            y: division.y * scaleFactorY,
+            width: division.width * scaleFactorX,
+            height: division.height * scaleFactorY
+          }))
+        );
+        
+    }
+      }, [message, editingLayout]);
+    
   const generateUniqueColor = (index) => {
     const hue = (index * 137) % 360;
     const saturation = 60;
@@ -181,43 +229,96 @@ const CustomLayout = ({ onSaveLayout }) => {
   };
   
 
-  const handleDragMove = (index, event) => {
-    const shape = event.target;
-    let newX = shape.x();
-    let newY = shape.y();
+  const handleUpdateLayout = () => {
+    const scaleFactorX = editingLayout.width / stageWidth;
+    const scaleFactorY = editingLayout.height / stageHeight;
+    
 
-    // Adjust stage width and height based on current orientation
-    const currentStageWidth =
-      orientation === "vertical" ? stageHeight : stageWidth;
-    const currentStageHeight =
-      orientation === "vertical" ? stageWidth : stageHeight;
-
-    if (newX < 0) newX = 0;
-    if (newY < 0) newY = 0;
-    if (newX + shape.width() > currentStageWidth)
-      newX = currentStageWidth - 1 - shape.width();
-    if (newY + shape.height() > currentStageHeight)
-      newY = currentStageHeight - 1 - shape.height();
-    shape.x(newX);
-    shape.y(newY);
-
-    const updatedDivisions = [...divisions];
-    updatedDivisions[index] = {
-      ...updatedDivisions[index],
-      x: newX,
-      y: newY,
-      width: shape.width(),
-      height: shape.height(),
-    };
-    setDivisions(updatedDivisions);
-    setDivisionDetails({
-      x: newX,
-      y: newY,
-      width: shape.width(),
-      height: shape.height(),
-      id: shape.id(),
-    });
+    // const updatedLayout = {
+    //   id: editingLayout.id,
+    //   name: layoutName,
+    //   stageDimensions: {
+    //     width: resolutionMapping[resolution].width,
+    //     height: resolutionMapping[resolution].height,
+    //   },
+    //   orientation,
+    //   divisions: JSON.stringify(divisions.map(division => ({
+    //     x: division.x * scaleFactorX, 
+    //     y: division.y * scaleFactorY,
+    //     id: division.id, 
+    //     fill: division.fill, 
+    //     width: division.width * scaleFactorX,
+    //     height: division.height * scaleFactorY
+    //   })))    };
+    const updatedLayout = {
+      id: editingLayout.id,
+      name: layoutName,
+      stageDimensions: orientation === "vertical"
+          ? { width: resolutionMapping[resolution].height, height: resolutionMapping[resolution].width } // Swap for vertical
+          : { width: resolutionMapping[resolution].width, height: resolutionMapping[resolution].height },
+  
+      orientation: orientation,
+      divisions: divisions.map(division => ({
+          x: orientation === "vertical"
+              ? (division.x / stageHeight) * resolutionMapping[resolution].height // Swap for vertical
+              : (division.x / stageWidth) * resolutionMapping[resolution].width,
+          y: orientation === "vertical"
+              ? (division.y / stageWidth) * resolutionMapping[resolution].width
+              : (division.y / stageHeight) * resolutionMapping[resolution].height,
+          width: orientation === "vertical"
+              ? (division.width / stageHeight) * resolutionMapping[resolution].height
+              : (division.width / stageWidth) * resolutionMapping[resolution].width,
+          height: orientation === "vertical"
+              ? (division.height / stageWidth) * resolutionMapping[resolution].width
+              : (division.height / stageHeight) * resolutionMapping[resolution].height,
+          fill: division.fill, 
+          id: division.id 
+      }))
   };
+            
+    onUpdateLayout(updatedLayout); // Send updated data back to SaveLayout
+
+console.log("Final Layout Object to Update:", JSON.stringify(updatedLayout, null, 2));
+
+
+};
+    
+  
+
+const handleDragMove = (index, event) => {
+  const shape = event.target;
+  let newX = shape.x();
+  let newY = shape.y();
+  let newWidth = shape.width();
+  let newHeight = shape.height();
+
+  // Get current stage dimensions
+  const stageW = orientation === "vertical" ? stageHeight : stageWidth;
+  const stageH = orientation === "vertical" ? stageWidth : stageHeight;
+
+  // Restrict division within layout boundaries
+  newX = Math.max(0, Math.min(newX, stageW - newWidth));
+  newY = Math.max(0, Math.min(newY, stageH - newHeight));
+
+  shape.x(newX);
+  shape.y(newY);
+
+  const updatedDivisions = [...divisions];
+  updatedDivisions[index] = {
+    ...updatedDivisions[index],
+    x: newX,
+    y: newY,
+  };
+
+  setDivisions(updatedDivisions);
+  setDivisionDetails({
+    x: newX,
+    y: newY,
+    width: newWidth,
+    height: newHeight,
+    id: shape.id(),
+  });
+};
 
   const handleClickDivision = (index) => {
     setSelectedDivisionIndex(index);
@@ -243,51 +344,51 @@ const CustomLayout = ({ onSaveLayout }) => {
   // 111234567
   const handleTransformEnd = (index, event) => {
     const shape = shapeRefs.current[index];
-    const transformer = transformerRefs.current[index];
-
-    if (shape && transformer) {
-      let newX = shape.x();
-      let newY = shape.y();
-      let newWidth = shape.width() * shape.scaleX();
-      let newHeight = shape.height() * shape.scaleY();
-
-      const maxHeight = resolutionMapping[resolution].height; // Maximum allowed height
-      const maxWidth = resolutionMapping[resolution].width;  // Maximum allowed width
-
-      // Ensure width and height stay within the resolution's boundaries
-      const constrainedWidth = Math.min(newWidth, maxWidth - newX);
-      const constrainedHeight = Math.min(newHeight, maxHeight - newY);
-
-      // Ensure x and y stay within the resolution's boundaries
-      const constrainedX = Math.max(0, Math.min(newX, maxWidth - constrainedWidth));
-      const constrainedY = Math.max(0, Math.min(newY, maxHeight - constrainedHeight));
-
-      shape.width(constrainedWidth / shape.scaleX());
-      shape.height(constrainedHeight / shape.scaleY());
-      shape.scaleX(1);
-      shape.scaleY(1);
-      shape.x(constrainedX);
-      shape.y(constrainedY);
-
-      const updatedDivisions = [...divisions];
-      updatedDivisions[index] = {
-        ...updatedDivisions[index],
-        x: constrainedX,
-        y: constrainedY,
-        width: constrainedWidth,
-        height: constrainedHeight,
-      };
-      setDivisions(updatedDivisions);
-      setDivisionDetails({
-        x: constrainedX,
-        y: constrainedY,
-        width: constrainedWidth,
-        height: constrainedHeight,
-        id: shape.id(),
-      });
-    }
+  
+    if (!shape) return;
+  
+    let newX = shape.x();
+    let newY = shape.y();
+    let newWidth = shape.width() * shape.scaleX();
+    let newHeight = shape.height() * shape.scaleY();
+  
+    // Get current stage dimensions
+    const stageW = orientation === "vertical" ? stageHeight : stageWidth;
+    const stageH = orientation === "vertical" ? stageWidth : stageHeight;
+  
+    // Restrict resizing within layout boundaries
+    newWidth = Math.min(newWidth, stageW - newX);
+    newHeight = Math.min(newHeight, stageH - newY);
+    
+    newX = Math.max(0, Math.min(newX, stageW - newWidth));
+    newY = Math.max(0, Math.min(newY, stageH - newHeight));
+  
+    shape.width(newWidth / shape.scaleX());
+    shape.height(newHeight / shape.scaleY());
+    shape.scaleX(1);
+    shape.scaleY(1);
+    shape.x(newX);
+    shape.y(newY);
+  
+    const updatedDivisions = [...divisions];
+    updatedDivisions[index] = {
+      ...updatedDivisions[index],
+      x: newX,
+      y: newY,
+      width: newWidth,
+      height: newHeight,
+    };
+  
+    setDivisions(updatedDivisions);
+    setDivisionDetails({
+      x: newX,
+      y: newY,
+      width: newWidth,
+      height: newHeight,
+      id: shape.id(),
+    });
   };
-
+  
   const handleOrientationChange = (newOrientation) => {
     setOrientation(newOrientation);
 
@@ -444,7 +545,7 @@ const CustomLayout = ({ onSaveLayout }) => {
               onClick={handleStageClick}
             >
               <Layer>
-                {divisions.map((rect, index) => (
+              {(divisions || []).map((rect, index) => (
                   <React.Fragment key={rect.id}>
                     <Rect
                       x={rect.x}
@@ -480,13 +581,15 @@ const CustomLayout = ({ onSaveLayout }) => {
 
         {/* Input & Button */}
         <div className="mb-4 flex justify-center items-center gap-2">
-          <button
-            onClick={handleSaveLayout}
-            className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-700 flex items-center gap-2"
-          >
-            <FaSave />
-            <span>Save Layout</span>
-          </button>
+        <button
+  onClick={editingLayout ? handleUpdateLayout : handleSaveLayout}
+  className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-700 flex items-center gap-2"
+>
+  <FaSave />
+  <span>{editingLayout ? "Update Layout" : "Save Layout"}</span>
+</button>
+
+
           <button
             onClick={handleAddDivision}
             className="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-700 flex items-center gap-2"
