@@ -23,8 +23,6 @@ const formatTime = (seconds) => {
 
 const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
   // for api authentication start
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
   const [ffmpegInstance, setFfmpegInstance] = useState(null); // Add state
 
   // i want to chnage code for download button disable
@@ -306,12 +304,13 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
     if (isUploading) return;
     setisUploading(true);
 
+
     const token = getToken(); // Fetch token from localStorage
-    if (!token) {
-      setShowLogin(true);
+  if (!token) {
       setisUploading(false);
       return;
-    }
+  }
+
 
     try {
       // Check if recording exists
@@ -926,15 +925,6 @@ let divisionHeight = d.height * scaleY;
             </span>
           </div>
 
-          {showLogin && (
-            <Login
-              onLogin={() => {
-                setIsLoggedIn(true);
-                setShowLogin(false);
-                handleSaveAndOpenVideo();
-              }}
-            />
-          )}
         </div>
       </div>
     </div>

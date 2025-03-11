@@ -38,7 +38,13 @@ const App = () => {
 
   const fetchLayouts = async () => {
     try {
-      const response = await fetch("https://dev.app.hd2.menu/api/layouts");
+      const response = await fetch("https://dev.app.hd2.menu/api/user-layouts", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`, // Use Bearer token
+        },
+      });
       setLayouts(response.data.data); // Update state with fresh data
     } catch (error) {
       console.error("Error fetching layouts:", error);
@@ -56,7 +62,12 @@ const App = () => {
     try {
       const response = await fetch(`https://dev.app.hd2.menu/api/delete-layout-value/${layoutId}`, {
         method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`,  // Include token
+        },
       });
+      
   
       if (!response.ok) {
         throw new Error("Failed to delete layout from server");
@@ -67,7 +78,7 @@ const App = () => {
       setMessage({ text: "Layout deleted successfully!", type: "success" });
   
       // Fetch updated layouts after deletion
-      await fetchLayouts(); 
+      // await fetchLayouts(); 
   
       if (currentLayout && currentLayout.id === layoutId) {
         removeloadLayout();

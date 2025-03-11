@@ -8,6 +8,7 @@ import { IoMdAdd } from "react-icons/io";
 import CustomLayout from "../CustomLayout/CustomLayout";
 import { IoCloseSharp } from "react-icons/io5";
 import PopUpMessage from "../PopUpMessage";
+import Login from "../Timeline/Login";
 
 
 const SaveLayout = ({
@@ -22,14 +23,21 @@ const SaveLayout = ({
   const [isCustomLayoutOpen, setIsCustomLayoutOpen] = useState(false);
   const [editingLayout, setEditingLayout] = useState(null); // Store layout being edited
   const [message, setMessage] = useState({ text: "", type: "" });
+  const [showLogin, setShowLogin] = useState(false);
 
 
 
   // i want to change for vertical 2nd time
   const fetchLayouts = async () => {
     try {
-      const response = await fetch("https://dev.app.hd2.menu/api/layouts");
-      if (!response.ok) {
+      const response = await fetch("https://dev.app.hd2.menu/api/user-layouts", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`, // Use Bearer token
+        },
+      });
+                  if (!response.ok) {
         throw new Error("Failed to fetch layouts");
       }
       const data = await response.json();
@@ -52,10 +60,46 @@ divisions: JSON.parse(layout.divisions || "[]"),
   };
 
 
-  const handleEditLayout = async (layoutId) => {
-    try {
-      const response = await fetch(`https://dev.app.hd2.menu/api/edit-layout-value/${layoutId}`);
+  // const handleEditLayout = async (layoutId) => {
+  //   try {
+  //     const response = await fetch(`https://dev.app.hd2.menu/api/edit-layout-value/${layoutId}`);
       
+  //     if (!response.ok) {
+  //       throw new Error("Failed to fetch layout details");
+  //     }
+  
+  //     const data = await response.json();
+  //     setEditingLayout({
+  //       ...data.data, 
+  //       divisions: JSON.parse(data.data.divisions || "[]") 
+  //     });
+            
+  //     setIsCustomLayoutOpen(true); // Open CustomLayout modal
+  //   } catch (error) {
+  //     console.error("Error fetching layout for editing:", error);
+  //   }
+  // };
+  
+
+  // Function to handle opening the custom layout modal
+  
+  const handleEditLayout = async (layoutId) => {
+    const token = localStorage.getItem("token");
+  
+    if (!token) {
+      setMessage({ text: "Please login first.", type: "error" });
+      return;
+    }
+  
+    try {
+      const response = await fetch(`https://dev.app.hd2.menu/api/edit-layout-value/${layoutId}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`, // Include the token
+        },
+      });
+  
       if (!response.ok) {
         throw new Error("Failed to fetch layout details");
       }
@@ -63,17 +107,17 @@ divisions: JSON.parse(layout.divisions || "[]"),
       const data = await response.json();
       setEditingLayout({
         ...data.data, 
-        divisions: JSON.parse(data.data.divisions || "[]") 
+        divisions: JSON.parse(data.data.divisions || "[]"),
       });
-            
+  
       setIsCustomLayoutOpen(true); // Open CustomLayout modal
     } catch (error) {
       console.error("Error fetching layout for editing:", error);
+      setMessage({ text: "Failed to fetch layout. Please try again.", type: "error" });
     }
   };
   
-
-  // Function to handle opening the custom layout modal
+  
   const handleAddCustomLayout = () => {
     setIsCustomLayoutOpen(true); // Open the modal
   };
@@ -118,13 +162,55 @@ divisions: JSON.parse(layout.divisions || "[]"),
     fetchLayouts();
   }, []);
 
+  // const handleUpdateLayout = async (updatedLayout) => {
+  //   if (!updatedLayout || !updatedLayout.id) return;
+  
+  //   try {
+  //     const response = await fetch(`https://dev.app.hd2.menu/api/update-layout-value/${updatedLayout.id}`, {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify(updatedLayout),
+  //     });
+  
+  //     if (!response.ok) {
+  //       throw new Error("Failed to update layout");
+  //     }
+  
+  //     const data = await response.json();
+  //     console.log("Updated Layout:", data);
+      
+  //     setEditingLayout(null); // Clear editing state
+  //     setIsCustomLayoutOpen(false); // Close modal
+
+  //     setMessage({ text: "Layout updated successfully!", type: "success" });
+
+  //     await fetchLayouts(); // Refresh list after update
+
+  //     setTimeout(() => setMessage({ text: "", type: "" }), 3000); // Hide message after 3 sec
+
+  //   } catch (error) {
+  //     console.error("Error updating layout:", error);
+  //   }
+  // };
+
+
   const handleUpdateLayout = async (updatedLayout) => {
     if (!updatedLayout || !updatedLayout.id) return;
+  
+    const token = localStorage.getItem("token");
+  
+    if (!token) {
+      setMessage({ text: "Please login first.", type: "error" });
+      return;
+    }
   
     try {
       const response = await fetch(`https://dev.app.hd2.menu/api/update-layout-value/${updatedLayout.id}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`, // Include the token
+        },
         body: JSON.stringify(updatedLayout),
       });
   
@@ -134,33 +220,45 @@ divisions: JSON.parse(layout.divisions || "[]"),
   
       const data = await response.json();
       console.log("Updated Layout:", data);
-      
+  
       setEditingLayout(null); // Clear editing state
       setIsCustomLayoutOpen(false); // Close modal
-
+  
       setMessage({ text: "Layout updated successfully!", type: "success" });
-
+  
       await fetchLayouts(); // Refresh list after update
-
+  
       setTimeout(() => setMessage({ text: "", type: "" }), 3000); // Hide message after 3 sec
-
+  
     } catch (error) {
       console.error("Error updating layout:", error);
+      setMessage({ text: "Failed to update layout. Please try again.", type: "error" });
     }
   };
+  
   
 
   return (
     <div className="p-2">
       <div className="border-2 border-gray-200 p-2 rounded">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">Saved Layouts</h2>
-          <button
+          <h2 className="text-1xl font-bold">Saved Layouts</h2>
+    <div style={{display: 'flex', justifyContent: 'flex-end', width: '100%' , gap:'10px'}}>
+
+    <button
             className="px-2 py-2 text-white bg-blue-500 hover:bg-blue-700 cursor-pointer rounded flex items-center gap-2"
             onClick={handleAddCustomLayout}
           >
             <IoMdAdd className="text-2xl" /> Add Custom Layout
           </button>
+          <button
+  className="px-2 py-2 text-white bg-green-500 hover:bg-green-700 cursor-pointer rounded flex items-center gap-2"
+  onClick={() => setShowLogin(true)} // Trigger login modal
+>
+  User Login
+</button>
+
+    </div>
         </div>
         {layouts?.length === 0 ? (
           <p>No layouts saved yet.</p>
@@ -286,6 +384,7 @@ const scaledHeight = division.height / scaleFactor;
   onSaveLayout={handleSaveNewLayout} 
   editingLayout={editingLayout} 
   onUpdateLayout={handleUpdateLayout} 
+  fetchLayouts={fetchLayouts}
 />
 
           </div>
@@ -300,6 +399,14 @@ const scaledHeight = division.height / scaleFactor;
           onClose={() => setMessage({ text: "", type: "" })}
         />
       )}
+
+      {showLogin && (
+  <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+    <Login onClose={() => setShowLogin(false)} />
+
+  </div>
+)}
+
 
     </div>
   );

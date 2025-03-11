@@ -6,7 +6,8 @@ import PopUpMessage from "../PopUpMessage";
 import { IoMdAdd } from "react-icons/io";
 import { FaSave } from "react-icons/fa";
 
-const CustomLayout = ({ onSaveLayout, editingLayout, onUpdateLayout }) => {
+const CustomLayout = ({ onSaveLayout, editingLayout, onUpdateLayout, fetchLayouts }) => {
+
 
   console.log("editingLayout",editingLayout);
   const [layoutName, setLayoutName] = useState("");
@@ -173,7 +174,7 @@ setStageDimensions({
       name: layoutName,
       stageDimensions: savedStageDimensions,
       orientation: orientation,
-      created_by: "1",
+      created_by: Date.now().toString(),
       divisions: divisions.map((division) => {
         return orientation === "horizontal"
   ? {
@@ -198,11 +199,19 @@ setStageDimensions({
       
     console.log("Final Layout Object to Save:", savedLayout);
   
+    const token = localStorage.getItem("token"); // Fetch token
+
+    if (!token) {
+      setMessage({ text: "Please Login First.", type: "error" });
+      return; // Stop execution if token is missing
+    }
+    
     try {
       const response = await fetch("https://dev.app.hd2.menu/api/store-layout-value", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`, 
         },
         body: JSON.stringify(savedLayout),
       });
@@ -216,6 +225,9 @@ setStageDimensions({
   
       setMessage({ text: "Layout saved successfully!", type: "success" });
   
+      await fetchLayouts(); 
+
+
       // Reset state
       setLayoutName("");
       setDivisions([]);
