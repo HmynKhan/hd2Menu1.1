@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useState, useEffect } from "react";
+import { createContext, useEffect, useState } from "react";
 import SaveLayout from "./components/SaveLayout/SaveLayout";
 import ImageGallery from "./components/Image&Gallery/ImageGallery";
 import Timeline from "./components/Timeline/Timeline";
@@ -18,10 +18,6 @@ const App = () => {
   const [playlistName, setPlaylistName] = useState("");
   // for playlist name video api code end
   // Load layouts from localStorage on initial render
-  useEffect(() => {
-    const storedLayouts = JSON.parse(localStorage.getItem("layouts")) || [];
-    setLayouts(storedLayouts);
-  }, []);
 
   // Save a new layout and store it in localStorage
   // const saveLayout = (newLayout) => {
@@ -51,7 +47,10 @@ const App = () => {
     }
   };
 
-  
+  useEffect(() => {
+    fetchLayouts();
+  }, []);
+
   // Modify deleteLayout function
   const deleteLayout = async (layoutId) => {
     if (!layoutId) {

@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 /* eslint-disable no-unused-vars */
 import React, { useState, useRef, useEffect } from "react";
-import { Stage, Layer, Rect, Transformer } from "react-konva";
+import { Stage, Layer, Rect, Transformer, Text } from "react-konva";
 import PopUpMessage from "../PopUpMessage";
 import { IoMdAdd } from "react-icons/io";
 import { FaSave } from "react-icons/fa";
@@ -101,14 +101,12 @@ setStageDimensions({
     }
       }, [message, editingLayout]);
     
-  const generateUniqueColor = (index) => {
-    const hue = (index * 137) % 360;
-    const saturation = 60;
-    const lightness = 70;
-    // const color = "#ccc";
-    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-    // return color;
-  };
+const generateUniqueColor = (index) => {
+  const hue = (index * 137) % 360;
+  const saturation = 40; // reduce saturation to make it softer
+  const lightness = 89; // increased from 70 to 85 for lighter color
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+};
 
   const handleAddDivision = () => {
     const maxHeight = resolutionMapping[resolution].height;
@@ -133,7 +131,7 @@ setStageDimensions({
       width: newWidth / 2,
       height: newHeight / 2,
       fill: generateUniqueColor(divisions.length),
-      id: `rect-${divisions.length + 1}`,
+      id: `${divisions.length + 1}`,
     };
 
     setDivisions((prevDivisions) => [...prevDivisions, newDivision]);
@@ -559,12 +557,15 @@ const handleDragMove = (index, event) => {
               <Layer>
               {(divisions || []).map((rect, index) => (
                   <React.Fragment key={rect.id}>
+                    
                     <Rect
                       x={rect.x}
                       y={rect.y}
                       width={rect.width}
                       height={rect.height}
                       fill={rect.fill}
+                      // strokeWidth={1.0}
+                      // stroke='black'
                       draggable
                       onDragMove={(e) => handleDragMove(index, e)}
                       onClick={() => handleClickDivision(index)}
@@ -572,6 +573,15 @@ const handleDragMove = (index, event) => {
                         shapeRefs.current[index] = node;
                       }}
                     />
+                  {/* <Text
+                    x={rect.x + 5}
+                    y={rect.y + 5}
+                    text={`${rect?.id.replace("rect-", "")}`}
+                    fontSize={12}
+                    fill="black"
+                    width={rect.width}
+                    height={rect.height}
+                  /> */}
                     {selectedDivisionIndex === index && (
                       <Transformer
                         ref={(node) => {

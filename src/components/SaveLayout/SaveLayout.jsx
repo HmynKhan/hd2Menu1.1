@@ -2,13 +2,16 @@
 /* eslint-disable react/prop-types */
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useState } from "react";
-import { Stage, Layer, Rect } from "react-konva";
-import { RiDeleteBin2Fill } from "react-icons/ri";
+import { Stage, Layer, Rect, Text  } from "react-konva";
 import { IoMdAdd } from "react-icons/io";
 import CustomLayout from "../CustomLayout/CustomLayout";
 import { IoCloseSharp } from "react-icons/io5";
 import PopUpMessage from "../PopUpMessage";
 import Login from "../Timeline/Login";
+import { Menu, MenuItem, ListItemIcon, Typography, IconButton } from "@mui/material";
+import { FaEdit, FaTrash } from "react-icons/fa";
+import { BsThreeDotsVertical } from "react-icons/bs"; 
+import ConfirmationModal from "../ConfiramtionModal/confirmation_modal";
 
 
 const SaveLayout = ({
@@ -25,6 +28,22 @@ const SaveLayout = ({
   const [message, setMessage] = useState({ text: "", type: "" });
   const [showLogin, setShowLogin] = useState(false);
 
+  // for menu three dot
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [currentItem, setCurrentItem] = useState(null);
+  const [deleteId, setDeleteId] = useState();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+
+  const handleMenuOpen = (event, layout) => {
+  setAnchorEl(event.currentTarget);
+  setCurrentItem(layout);
+};
+
+const handleMenuClose = () => {
+  setAnchorEl(null);
+  setCurrentItem(null);
+};
 
 
   // i want to change for vertical 2nd time
@@ -236,9 +255,21 @@ divisions: JSON.parse(layout.divisions || "[]"),
     }
   };
   
-  
+  const handleDelete = async () => {
+  if (deleteId) {
+    await onDeleteLayout(deleteId);
+    setMessage({ text: "Layout deleted successfully!", type: "success" });
+    await fetchLayouts();
+    onCancle();
+  }
+  setIsModalOpen(false);
+};
+
+
 
   return (
+           
+    
     <div className="p-2">
       <div className="border-2 border-gray-200 p-2 rounded">
         <div className="flex justify-between items-center mb-4">
@@ -282,18 +313,60 @@ console.log(miniHeight,'miniHeight')
 {/* i want to change code for vertical */}
               const isLoaded = layoutIndex === currentLayoutIndex;
 
+
+const menu = (<Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+  <MenuItem
+    onClick={() => {
+      setCurrentItem(currentItem);
+      handleEditLayout(currentItem?.id);
+      handleMenuClose();
+    }}
+  >
+    <ListItemIcon>
+      <FaEdit size={22} color="#00B8D9" />
+    </ListItemIcon>
+    <Typography>Edit</Typography>
+  </MenuItem>
+
+<MenuItem
+  onClick={() => {
+    setDeleteId(currentItem?.id);     
+    setIsModalOpen(true);             
+    handleMenuClose();                
+  }}
+>  <ListItemIcon>
+    <FaTrash size={22} color="#ff5555" />
+  </ListItemIcon>
+  <Typography>Delete</Typography>
+</MenuItem>
+</Menu>
+)
+
               return (
                 <div
                   key={layoutIndex}
-                  className={`border border-gray-300 rounded mx-1 my-2 p-2 ${
+                  className={`border border-gray-300 rounded mx-1 my-2 p-2  ${
                     isLoaded
-                      ? "outline-blue-500 outline outline-offset-2 outline-4 bg-sky-500 bg-opacity-20"
+                      ? "outline-gray-500 outline outline-offset-2 outline-4 bg-gray-400 bg-opacity-20"
                       : ""
                   }`}
                 >
-                  <div onClick={() => onLoadLayout(layoutIndex)}>
+                  {menu}
+                  <ConfirmationModal
+                    open={isModalOpen}
+                    onClose={() => setIsModalOpen(false)}
+                    onConfirm={handleDelete}
+                    title="Delete Layout"
+                    message="Are you sure you want to delete this layout? This action cannot be undone."
+                  />
+                  <div onClick={() => onLoadLayout(layoutIndex)} className="cursor-pointer">
                     <div className="flex justify-between items-center mb-2">
-                      <h3 className="text-sm font-semibold">{layout.name}</h3>
+                      <h6 style={{fontSize:'12px', fontWeight:'500'}}>{layout.name}</h6>
+                      <div className="flex justify-end mt-2">
+  <IconButton onClick={(e) => handleMenuOpen(e, layout)}>
+    <BsThreeDotsVertical />
+  </IconButton>
+</div>
                     </div>
 
                     <div
@@ -318,9 +391,9 @@ const scaledHeight = division.height / scaleFactor;
                             // Adjust positions if divisions go out of bounds
                             const x = Math.max(0, Math.min(scaledX, miniWidth - scaledWidth));
                             const y = Math.max(0, Math.min(scaledY, miniHeight - scaledHeight));
-
+                            console.log("mnm",division)
                             return (
-                              <Rect
+                              <><Rect
                                 key={index}
                                 x={x}
                                 y={y}
@@ -328,8 +401,16 @@ const scaledHeight = division.height / scaleFactor;
                                 height={scaledHeight}
                                 fill={division.fill}
                                 stroke="black"
-                                strokeWidth={1}
-                              />
+                                text={`${division?.id}`}
+                                strokeWidth={0.2} />
+                                <Text
+                                  x={x+3}
+                                  y={y+3}
+                                  text={`${division?.id.replace("rect-", "")}`}
+                                  fontSize={8}
+                                  fill="black"
+                                  width={scaledWidth}
+                                  height={scaledHeight} /></>
                             );
                           })}
                         </Layer>
@@ -337,31 +418,7 @@ const scaledHeight = division.height / scaleFactor;
                     </div>
                   </div>
 
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      className="bg-red-500 hover:bg-red-700 text-white text-xs px-1 py-1 rounded"
-                      onClick={async () => {
-  if (layout?.id) {
-    await onDeleteLayout(layout.id);
-    await fetchLayouts(); 
-    onCancle();
-  } else {
-    console.error("Layout ID is undefined");
-  }
-}}
 
-
-                    >
-                      <RiDeleteBin2Fill className="text-xl" />
-                    </button>
-                    <button
-  className="bg-green-500 hover:bg-green-700 text-white text-xs px-1 py-1 rounded"
-  onClick={() => handleEditLayout(layout.id)}
->
-  Edit
-</button>
-
-                  </div>
                 </div>
               );
             })}
@@ -402,7 +459,7 @@ const scaledHeight = division.height / scaleFactor;
 
       {showLogin && (
   <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
-    <Login onClose={() => setShowLogin(false)} />
+    <Login onClose={() => setShowLogin(false)}  />
 
   </div>
 )}
