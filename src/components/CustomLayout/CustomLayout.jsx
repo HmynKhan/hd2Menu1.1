@@ -101,12 +101,13 @@ setStageDimensions({
     }
       }, [message, editingLayout]);
     
-const generateUniqueColor = (index) => {
+      const generateUniqueColor = (index) => {
   const hue = (index * 137) % 360;
-  const saturation = 40; // reduce saturation to make it softer
-  const lightness = 89; // increased from 70 to 85 for lighter color
+  const saturation = 30; // reduce saturation a bit more
+  const lightness = 90;  // make it very light
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 };
+
 
   const handleAddDivision = () => {
     const maxHeight = resolutionMapping[resolution].height;

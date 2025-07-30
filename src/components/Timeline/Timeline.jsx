@@ -324,9 +324,11 @@ const renderDivisions = () => {
         const previewHeight = isPortrait ? 55 : 40; // Taller for portrait
         
         // Calculate scale factors based on original layout dimensions
-        const scaleX = previewWidth / (isPortrait ? layout.height : layout.width);
-        const scaleY = previewHeight / (isPortrait ? layout.width : layout.height);
-
+        {/* const scaleX = previewWidth / (isPortrait ? layout.height : layout.width);
+        const scaleY = previewHeight / (isPortrait ? layout.width : layout.height); */}
+// Calculate scale factors based on original layout dimensions (don't swap here)
+const scaleX = previewWidth / layout.width;
+const scaleY = previewHeight / layout.height;
         return (
           <div key={index} className="flex items-start gap-4" style={{alignItems:'center'}}>
             {/* Left: Mini Layout Preview */}
@@ -341,43 +343,34 @@ const renderDivisions = () => {
                 borderRadius: "4px",
               }}
             >
-              {(() => {
-                // Adjust coordinates based on orientation
-                const x = isPortrait 
-                  ? division.y * scaleX 
-                  : division.x * scaleX;
-                const y = isPortrait 
-                  ? division.x * scaleY 
-                  : division.y * scaleY;
-                const w = isPortrait 
-                  ? division.height * scaleX 
-                  : division.width * scaleX;
-                const h = isPortrait 
-                  ? division.width * scaleY 
-                  : division.height * scaleY;
+{(() => {
+  // Fix: Don't swap coordinates, just scale them properly
+  const x = division.x * scaleX;
+  const y = division.y * scaleY;
+  const w = division.width * scaleX;
+  const h = division.height * scaleY;
 
-                return (
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: `${x}px`,
-                      top: `${y}px`,
-                      width: `${w}px`,
-                      height: `${h}px`,
-                      backgroundColor: division.fill || "#ef4444",
-                      fontSize: "10px",
-                      color: "black",
-                      display: "flex",
-                      justifyContent: "flex-start",
-                    }}
-                  >
-                  <div style={{position:'absolute',top:'1px',left:'2px'}}>
-                                        {division.id.replace("rect-", "")}
-
-                  </div>
-                  </div>
-                );
-              })()}
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: `${x}px`,
+        top: `${y}px`,
+        width: `${w}px`,
+        height: `${h}px`,
+        backgroundColor: division.fill || "#ef4444",
+        fontSize: "10px",
+        color: "black",
+        display: "flex",
+        justifyContent: "flex-start",
+      }}
+    >
+      <div style={{position:'absolute',top:'1px',left:'2px'}}>
+        {division.id.replace("rect-", "")}
+      </div>
+    </div>
+  );
+})()}
             </div>
 
             {/* Right: Actual Division Render */}

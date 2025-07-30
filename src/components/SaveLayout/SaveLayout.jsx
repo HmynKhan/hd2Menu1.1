@@ -10,8 +10,9 @@ import PopUpMessage from "../PopUpMessage";
 import Login from "../Timeline/Login";
 import { Menu, MenuItem, ListItemIcon, Typography, IconButton } from "@mui/material";
 import { FaEdit, FaTrash } from "react-icons/fa";
-import { BsThreeDotsVertical } from "react-icons/bs"; 
+// import { BsThreeDotsVertical } from "react-icons/bs"; 
 import ConfirmationModal from "../ConfiramtionModal/confirmation_modal";
+import { PiDotsThreeCircle } from "react-icons/pi";
 
 
 const SaveLayout = ({
@@ -274,16 +275,17 @@ divisions: JSON.parse(layout.divisions || "[]"),
       <div className="border-2 border-gray-200 p-2 rounded">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-1xl font-bold">Saved Layouts</h2>
-    <div style={{display: 'flex', justifyContent: 'flex-end', width: '100%' , gap:'10px'}}>
+
+    <div style={{display: 'flex', justifyContent: 'flex-end', width: '90%' , gap:'10px'}}>
 
     <button
-            className="px-2 py-2 text-white bg-blue-500 hover:bg-blue-700 cursor-pointer rounded flex items-center gap-2"
+            className="px-1 py-1 text-white bg-blue-500 hover:bg-blue-700 cursor-pointer rounded flex items-center gap-1"
             onClick={handleAddCustomLayout}
           >
-            <IoMdAdd className="text-2xl" /> Add Custom Layout
+            <IoMdAdd/> Add Custom Layout
           </button>
           <button
-  className="px-2 py-2 text-white bg-green-500 hover:bg-green-700 cursor-pointer rounded flex items-center gap-2"
+  className="px-2 py-2 my-1 text-white bg-green-500 hover:bg-green-700 cursor-pointer rounded flex items-center gap-2"
   onClick={() => setShowLogin(true)} // Trigger login modal
 >
   User Login
@@ -295,133 +297,134 @@ divisions: JSON.parse(layout.divisions || "[]"),
           <p>No layouts saved yet.</p>
         ) : (
           <div className="flex gap-4 overflow-x-auto" style={{ whiteSpace: "nowrap" }}>
-            {layouts?.map((layout, layoutIndex) => {
-              {/* const scaleFactor = 4; */}
-              const scaleFactor = layout.width / 84; // Dynamically adjust scale factor based on width
+      
+{layouts?.map((layout, layoutIndex) => {
+  {/* const scaleFactor = layout.width / 84; // Keep this for scaling divisions */}
 
-              let miniWidth = 85;
-              let miniHeight = (layout.height / layout.width) * miniWidth; 
+  let miniWidth = 60;
+  let miniHeight = 32; // Fixed height for consistency
 
-console.log(miniHeight,'miniHeight')
-              {/* let miniWidth = 100;
-              let miniHeight = 70; */}
+  // For portrait/vertical layouts, swap the dimensions to make it narrower and taller
+  // but keep it within reasonable bounds
+  if (layout.orientation === "portrait" || layout.orientation === "vertical") {
+    miniWidth = 35;  // Make it narrower
+    miniHeight = 58; // Make it a bit taller, but not too much
+  }
 
-              // Apply saved orientation to the mini preview
-              if (layout.orientation === "portrait") {
-                [miniWidth, miniHeight] = [miniWidth, miniHeight]; // Swap width and height for portrait mode
-              }
-{/* i want to change code for vertical */}
-              const isLoaded = layoutIndex === currentLayoutIndex;
+  console.log(miniHeight,'miniHeight')
 
+  const isLoaded = layoutIndex === currentLayoutIndex;
 
-const menu = (<Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
-  <MenuItem
-    onClick={() => {
-      setCurrentItem(currentItem);
-      handleEditLayout(currentItem?.id);
-      handleMenuClose();
-    }}
-  >
-    <ListItemIcon>
-      <FaEdit size={22} color="#00B8D9" />
-    </ListItemIcon>
-    <Typography>Edit</Typography>
-  </MenuItem>
+  // Rest of your code remains the same...
+  const menu = (<Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+    <MenuItem
+      onClick={() => {
+        setCurrentItem(currentItem);
+        handleEditLayout(currentItem?.id);
+        handleMenuClose();
+      }}
+    >
+      <ListItemIcon>
+        <FaEdit size={22} color="#00B8D9" />
+      </ListItemIcon>
+      <Typography>Edit</Typography>
+    </MenuItem>
 
-<MenuItem
-  onClick={() => {
-    setDeleteId(currentItem?.id);     
-    setIsModalOpen(true);             
-    handleMenuClose();                
-  }}
->  <ListItemIcon>
-    <FaTrash size={22} color="#ff5555" />
-  </ListItemIcon>
-  <Typography>Delete</Typography>
-</MenuItem>
-</Menu>
-)
+    <MenuItem
+      onClick={() => {
+        setDeleteId(currentItem?.id);     
+        setIsModalOpen(true);             
+        handleMenuClose();                
+      }}
+    >  
+      <ListItemIcon>
+        <FaTrash size={22} color="#ff5555" />
+      </ListItemIcon>
+      <Typography>Delete</Typography>
+    </MenuItem>
+  </Menu>)
 
-              return (
-                <div
-                  key={layoutIndex}
-                  className={`border border-gray-300 rounded mx-1 my-2 p-2  ${
-                    isLoaded
-                      ? "outline-gray-500 outline outline-offset-2 outline-4 bg-gray-400 bg-opacity-20"
-                      : ""
-                  }`}
-                >
-                  {menu}
-                  <ConfirmationModal
-                    open={isModalOpen}
-                    onClose={() => setIsModalOpen(false)}
-                    onConfirm={handleDelete}
-                    title="Delete Layout"
-                    message="Are you sure you want to delete this layout? This action cannot be undone."
-                  />
-                  <div onClick={() => onLoadLayout(layoutIndex)} className="cursor-pointer">
-                    <div className="flex justify-between items-center mb-2">
-                      <h6 style={{fontSize:'12px', fontWeight:'500'}}>{layout.name}</h6>
-                      <div className="flex justify-end mt-2">
-  <IconButton onClick={(e) => handleMenuOpen(e, layout)}>
-    <BsThreeDotsVertical />
-  </IconButton>
-</div>
-                    </div>
+  return (
+    <div
+      key={layoutIndex}
+      style={{height:'fit-content'}}
+      className={`border border-gray-300 rounded mx-1 my-2 p-1  ${
+        isLoaded
+          ? "outline-gray-500 outline outline-offset-2 outline-4 bg-gray-400 bg-opacity-20"
+          : ""
+      }`}
+    >
+      {menu}
+      <ConfirmationModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={handleDelete}
+        title="Delete Layout"
+        message="Are you sure you want to delete this layout? This action cannot be undone."
+      />
+      <div onClick={() => onLoadLayout(layoutIndex)} className="cursor-pointer" style={{alignItems:'center'}}>
+        
+        <div  style={{display:'flex', justifyContent : 'center', alignItems: 'center' }}>
+          <h6 style={{ fontSize: '12px', fontWeight: '500' }}>{layout.name}</h6>
+          <div className="flex justify-end">
+            <IconButton onClick={(e) => handleMenuOpen(e, layout)}>
+              <PiDotsThreeCircle size={30} />
+            </IconButton>
+          </div>
+        </div>
 
-                    <div
-                      className="border border-gray-400 relative"
-                      style={{ width: miniWidth, height: miniHeight }}
-                    >
-                      <Stage width={miniWidth} height={miniHeight}>
-                        <Layer>
-                          {(layout.divisions || []).map((division, index) => {
-                            // Calculate scaled dimensions
-                            {/* const scaledX = division.x / scaleFactor;
-                            const scaledY = division.y / scaleFactor;
-                            const scaledWidth = division.width / scaleFactor;
-                            const scaledHeight = division.height / scaleFactor; */}
+        <div
+          className="border border-gray-400 relative"
+          style={{ width: miniWidth+2, height: miniHeight+2 }}
+        >
+          <Stage width={miniWidth+3} height={miniHeight+3}>
+            <Layer>
+              {(layout.divisions || []).map((division, index) => {
+                // Calculate proper scale factor based on the actual layout dimensions vs mini preview
+                const scaleFactorX = miniWidth / layout.width;
+                const scaleFactorY = miniHeight / layout.height;
+                
+                const scaledX = division.x * scaleFactorX;
+                const scaledY = division.y * scaleFactorY;
+                const scaledWidth = division.width * scaleFactorX;
+                const scaledHeight = division.height * scaleFactorY;
 
-                            const scaledX = division.x / scaleFactor;
-const scaledY = division.y / scaleFactor;
-const scaledWidth = division.width / scaleFactor;
-const scaledHeight = division.height / scaleFactor;
-
-
-                            // Adjust positions if divisions go out of bounds
-                            const x = Math.max(0, Math.min(scaledX, miniWidth - scaledWidth));
-                            const y = Math.max(0, Math.min(scaledY, miniHeight - scaledHeight));
-                            console.log("mnm",division)
-                            return (
-                              <><Rect
-                                key={index}
-                                x={x}
-                                y={y}
-                                width={scaledWidth}
-                                height={scaledHeight}
-                                fill={division.fill}
-                                stroke="black"
-                                text={`${division?.id}`}
-                                strokeWidth={0.2} />
-                                <Text
-                                  x={x+3}
-                                  y={y+3}
-                                  text={`${division?.id.replace("rect-", "")}`}
-                                  fontSize={8}
-                                  fill="black"
-                                  width={scaledWidth}
-                                  height={scaledHeight} /></>
-                            );
-                          })}
-                        </Layer>
-                      </Stage>
-                    </div>
-                  </div>
-
-
-                </div>
-              );
-            })}
+                // Adjust positions if divisions go out of bounds
+                const x = Math.max(0, Math.min(scaledX, miniWidth - scaledWidth));
+                const y = Math.max(0, Math.min(scaledY, miniHeight - scaledHeight));
+                console.log("mnm",division)
+                return (
+                  <>
+                    <Rect
+                      key={index}
+                      x={x}
+                      y={y}
+                      width={scaledWidth}
+                      height={scaledHeight}
+                      fill={division.fill}
+                      stroke="black"
+                      text={`${division?.id}`}
+                      strokeWidth={0.2} 
+                    />
+                    <Text
+                      x={x+2}
+                      y={y+2}
+                      text={`${division?.id.replace("rect-", "")}`}
+                      fontSize={8}
+                      fill="black"
+                      width={scaledWidth}
+                      height={scaledHeight} 
+                    />
+                  </>
+                );
+              })}
+            </Layer>
+          </Stage>
+        </div>
+      </div>
+    </div>
+  );
+})}
           </div>
         )}
       </div>
