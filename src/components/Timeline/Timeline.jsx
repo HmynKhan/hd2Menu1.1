@@ -358,9 +358,9 @@ const scaleY = previewHeight / layout.height;
         top: `${y}px`,
         width: `${w}px`,
         height: `${h}px`,
-        backgroundColor: division.fill || "#ef4444",
-        fontSize: "10px",
-        color: "black",
+        backgroundColor: "#0077b5",
+        fontSize: "8px",
+        color: "white",
         display: "flex",
         justifyContent: "flex-start",
       }}
@@ -388,12 +388,14 @@ const scaleY = previewHeight / layout.height;
         {layout && (
           <div className="flex items-center justify-between mt-4">
             <button
+            style={{fontSize:'10px'}}
               className="px-2 py-1 text-white bg-green-500 hover:bg-green-700 cursor-pointer rounded"
               onClick={() => setShowPreview(true)}
             >
               Preview
             </button>
             <button
+                        style={{fontSize:'10px'}}
               onClick={() => handleCancle()}
               className="px-2 py-1 text-white bg-red-500 hover:bg-red-700 cursor-pointer rounded"
             >

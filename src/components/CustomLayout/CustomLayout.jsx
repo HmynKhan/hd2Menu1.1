@@ -6,6 +6,21 @@ import PopUpMessage from "../PopUpMessage";
 import { IoMdAdd } from "react-icons/io";
 import { FaSave } from "react-icons/fa";
 
+
+const colorPalette = [
+  'rgba(212, 226, 238, 0.5)',
+  'rgba(198, 219, 233, 0.5)',
+  'rgba(184, 210, 229, 0.5)',
+  'rgba(170, 202, 225, 0.5)',
+  'rgba(157, 194, 221, 0.5)',
+  'rgba(144, 186, 216, 0.5)',
+  'rgba(130, 178, 212, 0.5)',
+  'rgba(117, 170, 208, 0.5)',
+  'rgba(110, 160, 196, 0.5)',
+  'rgba(106, 151, 182, 0.5)' 
+];
+
+
 const CustomLayout = ({ onSaveLayout, editingLayout, onUpdateLayout, fetchLayouts }) => {
 
 
@@ -101,17 +116,38 @@ setStageDimensions({
     }
       }, [message, editingLayout]);
     
-      const generateUniqueColor = (index) => {
-  const hue = (index * 137) % 360;
-  const saturation = 30; // reduce saturation a bit more
-  const lightness = 90;  // make it very light
-  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+//       const generateUniqueColor = (index) => {
+//   const hue = (index * 137) % 360;
+//   const saturation = 30; // reduce saturation a bit more
+//   const lightness = 90;  // make it very light
+//   return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+// };
+
+
+const generateUniqueColor = (index) => {
+  return colorPalette[index % colorPalette.length];
 };
+
+// const generateUniqueColor = (index) => {
+//   const hue = 205; // Fixed hue for sky blue
+//   const saturation = 60 - (index * 3); // Gradually reduce saturation
+//   const lightness = 85 - (index * 2);  // Gradually reduce lightness
+//   return `hsl(${hue}, ${Math.max(saturation, 30)}%, ${Math.max(lightness, 60)}%)`;
+// };
 
 
   const handleAddDivision = () => {
     const maxHeight = resolutionMapping[resolution].height;
     const maxWidth = resolutionMapping[resolution].width;
+
+    
+     if (divisions.length >= 10) {
+    setMessage({ 
+      text: "You have reached the maximum limit of 10 divisions", 
+      type: "error" 
+    });
+    return;
+  }
 
     // Default size for the new division
     let newWidth, newHeight;
@@ -126,9 +162,13 @@ setStageDimensions({
       newHeight = Math.min(maxHeight / 2, stageHeight);
     }
 
+    const randomX = Math.floor(Math.random() * 195); // 0 to 330
+const randomY = Math.floor(Math.random() * 145); // 0 to 330
+
+
     const newDivision = {
-      x: 0,
-      y: 0,
+x: randomX,
+y: randomY,
       width: newWidth / 2,
       height: newHeight / 2,
       fill: generateUniqueColor(divisions.length),
@@ -476,19 +516,29 @@ const handleDragMove = (index, event) => {
   };
 
   return (
-    <div className="p-2 ">
-      <div className=" p-2 rounded">
-        {/* Header */}
-        <h1 className="text-2xl font-bold mb-4 text-center">
-          Create Custom Layout
-        </h1>
 
-        {/* Layout Name and Device Resolution */}
+
+  <div className="p-2">
+
+    <div className="p-2 rounded">
+      {/* Header */}
+      <h1 className="text-2xl font-bold mb-4">
+        Add Custom Layout
+      </h1>
+
+      {/* Main Content Area - Split into Left and Right */}
+      <div className="flex flex-row gap-4">
+        {/* Left Section (40%) - Controls */}
+     
+        <div className="w-2/5">
+       
+               {/* Layout Name and Device Resolution */}
         <div className="mb-4 flex flex-col gap-2">
           {/* Layout Name */}
           <div className="flex items-center justify-between">
-            <label className="font-semibold mr-2">Enter Layout Name:</label>
+            <label className="font-semibold" style={{fontSize:'12px'}}>Layout Name:</label>
             <input
+            style={{fontSize:'12px'}}
               type="text"
               value={layoutName}
               onChange={(e) => setLayoutName(e.target.value)}
@@ -499,9 +549,10 @@ const handleDragMove = (index, event) => {
 
           {/* Device Resolution */}
           <div className="flex items-center justify-between">
-            <label className="font-semibold mr-2">Device Resolution:</label>
+            <label style={{fontSize:'12px'}} className="font-semibold">Device Resolution:</label>
             <select
               value={resolution}
+              style={{fontSize:'15px'}}
               onChange={(e) => setResolution(e.target.value)}
               className="border rounded px-2 py-1"
             >
@@ -515,10 +566,11 @@ const handleDragMove = (index, event) => {
         {/* i want to add device orientation */}
         {/* Device Orientation */}
         <div className="mb-4 flex items-center justify-between">
-          <label className="font-semibold mr-2">Device Orientation:</label>
+          <label style={{fontSize:'12px'}} className="font-semibold mr-2">Device Orientation:</label>
           <div className="flex items-center">
-            <label className="mr-4">
+            <label className="mr-2" style={{fontSize:'12px'}}>
               <input
+              style={{fontSize:'12px'}}
                 type="radio"
                 value="horizontal"
                 checked={orientation === "horizontal"}
@@ -527,7 +579,7 @@ const handleDragMove = (index, event) => {
               />
               Horizontal
             </label>
-            <label>
+            <label style={{fontSize:'12px'}}>
               <input
                 type="radio"
                 value="vertical"
@@ -540,8 +592,13 @@ const handleDragMove = (index, event) => {
           </div>
         </div>
 
-        {/* Layout */}
-        <div className="flex items-center justify-center mb-2">
+
+        </div>
+
+        {/* Right Section (60%) - Stage Canvas */}
+        <div className="w-3/5">
+     
+                  <div className="flex items-center justify-center mb-2">
           <div
             className="border border-black"
             ref={layoutRef}
@@ -565,8 +622,8 @@ const handleDragMove = (index, event) => {
                       width={rect.width}
                       height={rect.height}
                       fill={rect.fill}
-                      // strokeWidth={1.0}
-                      // stroke='black'
+                      strokeWidth={1}
+                      stroke='black'
                       draggable
                       onDragMove={(e) => handleDragMove(index, e)}
                       onClick={() => handleClickDivision(index)}
@@ -574,6 +631,14 @@ const handleDragMove = (index, event) => {
                         shapeRefs.current[index] = node;
                       }}
                     />
+                    <Text
+  x={rect.x + 5} // Small offset from left
+  y={rect.y + 5} // Small offset from top
+  text={`${index + 1}`} // Display division number (1-based index)
+  fontSize={10}
+  fill="black"
+  // fontStyle="bold"
+/>
                   {/* <Text
                     x={rect.x + 5}
                     y={rect.y + 5}
@@ -605,6 +670,8 @@ const handleDragMove = (index, event) => {
         {/* Input & Button */}
         <div className="mb-4 flex justify-center items-center gap-2">
         <button
+                    style={{fontSize:'10px'}}
+
   onClick={editingLayout ? handleUpdateLayout : handleSaveLayout}
   className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-700 flex items-center gap-2"
 >
@@ -614,15 +681,29 @@ const handleDragMove = (index, event) => {
 
 
           <button
+                      style={{fontSize:'10px'}}
+
             onClick={handleAddDivision}
             className="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-700 flex items-center gap-2"
           >
-            <IoMdAdd />
+            <IoMdAdd size={16} />
             <span>Add Division</span>
           </button>
         </div>
 
-        {/* Division Controllers */}
+        </div>
+      </div>
+
+
+{
+  divisions?.length ? (
+    <h2 className="text-md font-bold mb-2">Screen Divison</h2>
+  )
+  :
+  ('')
+}
+
+              {/* Division Controllers */}
         <div className="flex flex-col items-center mb-4 gap-4">
           {divisions.map((division, index) => (
             <div
@@ -697,7 +778,10 @@ const handleDragMove = (index, event) => {
           onClose={() => setMessage({ text: "", type: "" })}
         />
       )}
+
     </div>
+
+
   );
 };
 

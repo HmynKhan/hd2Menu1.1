@@ -93,10 +93,11 @@ const ImageGallery = () => {
             placeholder="Search by name"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="border border-gray-300 p-2 rounded-lg w-full mr-2"
+            className="border border-gray-300 p-1 rounded-lg w-full mr-2"
           />
           <button
             onClick={handleSearch}
+                        style={{fontSize:'12px'}}
             className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
           >
             Search
@@ -143,7 +144,8 @@ const ImageGallery = () => {
             {currentPage < totalPages && (
               <div className="mt-4 text-center">
                 <button
-                  className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                style={{fontSize:'12px'}}
+                  className="bg-blue-500 text-white px-2 py-1 rounded-lg hover:bg-blue-700"
                   onClick={loadMoreMedia}
                   disabled={isLoadingMore}
                 >

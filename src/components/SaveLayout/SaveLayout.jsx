@@ -1,4 +1,3 @@
-/* eslint-disable no-self-assign */ 
 /* eslint-disable react/prop-types */
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useState } from "react";
@@ -9,9 +8,10 @@ import { IoCloseSharp } from "react-icons/io5";
 import PopUpMessage from "../PopUpMessage";
 import Login from "../Timeline/Login";
 import { Menu, MenuItem, ListItemIcon, Typography, IconButton } from "@mui/material";
-import { FaEdit, FaTrash } from "react-icons/fa";
-// import { BsThreeDotsVertical } from "react-icons/bs"; 
 import ConfirmationModal from "../ConfiramtionModal/confirmation_modal";
+import { RiDeleteBin6Line } from "react-icons/ri";
+import { MdOutlineEdit } from "react-icons/md";
+import { IoDuplicate } from "react-icons/io5";
 import { PiDotsThreeCircle } from "react-icons/pi";
 
 
@@ -261,6 +261,7 @@ divisions: JSON.parse(layout.divisions || "[]"),
     await onDeleteLayout(deleteId);
     setMessage({ text: "Layout deleted successfully!", type: "success" });
     await fetchLayouts();
+    setIsModalOpen(false);
     onCancle();
   }
   setIsModalOpen(false);
@@ -268,24 +269,82 @@ divisions: JSON.parse(layout.divisions || "[]"),
 
 
 
+const handleDuplicateLayout = async (layout) => {
+  const token = localStorage.getItem("token");
+  
+  if (!token) {
+    setMessage({ text: "Please login first.", type: "error" });
+    return;
+  }
+
+  try {
+    // Create properly formatted duplicate
+    const duplicatedLayout = {
+      name: `${layout.name} (Copy)`,
+      stageDimensions: {
+        width: layout.width,
+        height: layout.height
+      },
+      orientation: layout.orientation === "portrait" ? "vertical" : "horizontal",
+      created_by: Date.now().toString(),
+      divisions: layout.divisions.map(division => ({
+        x: division.x,
+        y: division.y,
+        width: division.width,
+        height: division.height,
+        fill: division.fill,
+        id: division.id
+      }))
+    };
+
+    // Call store-layout API
+    const response = await fetch("https://dev.app.hd2.menu/api/store-layout-value", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify(duplicatedLayout),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to duplicate layout");
+    }
+
+    setMessage({ text: "Layout duplicated successfully!", type: "success" });
+    await fetchLayouts();
+    
+  } catch (error) {
+    console.error("Error duplicating layout:", error);
+    setMessage({ 
+      text: "Failed to duplicate layout. Please try again.", 
+      type: "error" 
+    });
+  }
+};
+
   return (
            
     
     <div className="p-2">
-      <div className="border-2 border-gray-200 p-2 rounded">
-        <div className="flex justify-between items-center mb-4">
+      <div className="border-2 border-gray-200  rounded">
+    
+        <div className="flex justify-between items-center mb-4 p-3"  style={{backgroundColor : '#f3f3f3'}}>
           <h2 className="text-1xl font-bold">Saved Layouts</h2>
 
-    <div style={{display: 'flex', justifyContent: 'flex-end', width: '90%' , gap:'10px'}}>
+    <div style={{display: 'flex', justifyContent: 'flex-end', width: '90%' , gap:'6px'}}>
 
     <button
             className="px-1 py-1 text-white bg-blue-500 hover:bg-blue-700 cursor-pointer rounded flex items-center gap-1"
             onClick={handleAddCustomLayout}
+            style={{fontSize:'10px'}}
           >
-            <IoMdAdd/> Add Custom Layout
+            <IoMdAdd size={16} /> Add Custom Layout
           </button>
           <button
-  className="px-2 py-2 my-1 text-white bg-green-500 hover:bg-green-700 cursor-pointer rounded flex items-center gap-2"
+                      style={{fontSize:'10px'}}
+
+  className="px-1 py-1 text-white bg-green-500 hover:bg-green-700 cursor-pointer rounded flex items-center gap-2"
   onClick={() => setShowLogin(true)} // Trigger login modal
 >
   User Login
@@ -296,19 +355,19 @@ divisions: JSON.parse(layout.divisions || "[]"),
         {layouts?.length === 0 ? (
           <p>No layouts saved yet.</p>
         ) : (
-          <div className="flex gap-4 overflow-x-auto" style={{ whiteSpace: "nowrap" }}>
+          <div className="flex  overflow-x-auto" style={{ whiteSpace: "nowrap" }}>
       
 {layouts?.map((layout, layoutIndex) => {
   {/* const scaleFactor = layout.width / 84; // Keep this for scaling divisions */}
 
-  let miniWidth = 60;
-  let miniHeight = 32; // Fixed height for consistency
+  let miniWidth = 85;
+  let miniHeight = 48; // Fixed height for consistency
 
   // For portrait/vertical layouts, swap the dimensions to make it narrower and taller
   // but keep it within reasonable bounds
   if (layout.orientation === "portrait" || layout.orientation === "vertical") {
-    miniWidth = 35;  // Make it narrower
-    miniHeight = 58; // Make it a bit taller, but not too much
+    miniWidth = 55;  // Make it narrower
+    miniHeight = 90; // Make it a bit taller, but not too much
   }
 
   console.log(miniHeight,'miniHeight')
@@ -325,35 +384,53 @@ divisions: JSON.parse(layout.divisions || "[]"),
       }}
     >
       <ListItemIcon>
-        <FaEdit size={22} color="#00B8D9" />
+
+        <MdOutlineEdit   />
       </ListItemIcon>
-      <Typography>Edit</Typography>
+      <Typography style={{fontSize:'10px'}}>Edit</Typography>
     </MenuItem>
+
+
+<MenuItem
+  onClick={() => {
+    handleDuplicateLayout(currentItem);
+    handleMenuClose();                
+  }}
+>  
+  <ListItemIcon>
+
+<IoDuplicate />
+
+  </ListItemIcon>
+  <Typography style={{fontSize:'10px'}}>Duplicate</Typography>
+</MenuItem>
 
     <MenuItem
       onClick={() => {
+        handleMenuClose();                
         setDeleteId(currentItem?.id);     
         setIsModalOpen(true);             
-        handleMenuClose();                
       }}
     >  
       <ListItemIcon>
-        <FaTrash size={22} color="#ff5555" />
+
+        <RiDeleteBin6Line  />
       </ListItemIcon>
-      <Typography>Delete</Typography>
+      <Typography style={{fontSize:'10px'}}>Delete</Typography>
     </MenuItem>
   </Menu>)
 
   return (
-    <div
-      key={layoutIndex}
-      style={{height:'fit-content'}}
-      className={`border border-gray-300 rounded mx-1 my-2 p-1  ${
-        isLoaded
-          ? "outline-gray-500 outline outline-offset-2 outline-4 bg-gray-400 bg-opacity-20"
-          : ""
-      }`}
-    >
+<div
+  key={layoutIndex}
+  style={{ marginLeft: '10px' }}
+  className={`border-2 rounded my-3 p-3 ${
+    isLoaded
+      ? "border-4 border-blue-500 "
+      : "border-gray-400"
+  }`}
+>
+
       {menu}
       <ConfirmationModal
         open={isModalOpen}
@@ -362,22 +439,27 @@ divisions: JSON.parse(layout.divisions || "[]"),
         title="Delete Layout"
         message="Are you sure you want to delete this layout? This action cannot be undone."
       />
-      <div onClick={() => onLoadLayout(layoutIndex)} className="cursor-pointer" style={{alignItems:'center'}}>
+
+      <div onClick={() => onLoadLayout(layoutIndex)} className="cursor-pointer" >
         
-        <div  style={{display:'flex', justifyContent : 'center', alignItems: 'center' }}>
-          <h6 style={{ fontSize: '12px', fontWeight: '500' }}>{layout.name}</h6>
-          <div className="flex justify-end">
-            <IconButton onClick={(e) => handleMenuOpen(e, layout)}>
-              <PiDotsThreeCircle size={30} />
+
+        <div  style={{display:'flex', justifyContent : 'space-between', alignItems:'center' }}>
+          <h6 style={{fontSize : '10px', fontWeight: '500' }}>{layout.name}</h6>
+         
+            <IconButton  onClick={(e) => handleMenuOpen(e, layout)}>
+              <PiDotsThreeCircle size={21} />
+
+
             </IconButton>
-          </div>
         </div>
+         
+   
 
         <div
-          className="border border-gray-400 relative"
+          className="border border-gray-400 relative mt-2"
           style={{ width: miniWidth+2, height: miniHeight+2 }}
         >
-          <Stage width={miniWidth+3} height={miniHeight+3}>
+          <Stage width={miniWidth+1} height={miniHeight+0} style={{backgroundColor:'#eeeeee'}}>
             <Layer>
               {(layout.divisions || []).map((division, index) => {
                 // Calculate proper scale factor based on the actual layout dimensions vs mini preview
@@ -402,15 +484,15 @@ divisions: JSON.parse(layout.divisions || "[]"),
                       width={scaledWidth}
                       height={scaledHeight}
                       fill={division.fill}
-                      stroke="black"
+                      stroke="white"
                       text={`${division?.id}`}
-                      strokeWidth={0.2} 
+                      strokeWidth={1} 
                     />
                     <Text
                       x={x+2}
                       y={y+2}
                       text={`${division?.id.replace("rect-", "")}`}
-                      fontSize={8}
+                      fontSize={7}
                       fill="black"
                       width={scaledWidth}
                       height={scaledHeight} 
@@ -422,6 +504,7 @@ divisions: JSON.parse(layout.divisions || "[]"),
           </Stage>
         </div>
       </div>
+  
     </div>
   );
 })}
