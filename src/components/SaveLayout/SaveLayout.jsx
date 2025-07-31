@@ -374,51 +374,78 @@ const handleDuplicateLayout = async (layout) => {
 
   const isLoaded = layoutIndex === currentLayoutIndex;
 
-  // Rest of your code remains the same...
-  const menu = (<Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+const menu = (
+  <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+
+    {/* Edit */}
     <MenuItem
       onClick={() => {
         setCurrentItem(currentItem);
         handleEditLayout(currentItem?.id);
         handleMenuClose();
       }}
+      sx={{
+        '&:hover': {
+          backgroundColor: 'rgba(33, 150, 243, 0.1)', // light blue
+          '& .MuiListItemIcon-root, & .MuiTypography-root': {
+            color: '#2196f3' // blue
+          }
+        }
+      }}
     >
       <ListItemIcon>
-
-        <MdOutlineEdit   />
+        <MdOutlineEdit />
       </ListItemIcon>
-      <Typography style={{fontSize:'10px'}}>Edit</Typography>
+      <Typography style={{ fontSize: '10px' }}>Edit</Typography>
     </MenuItem>
 
-
-<MenuItem
-  onClick={() => {
-    handleDuplicateLayout(currentItem);
-    handleMenuClose();                
-  }}
->  
-  <ListItemIcon>
-
-<IoDuplicate />
-
-  </ListItemIcon>
-  <Typography style={{fontSize:'10px'}}>Duplicate</Typography>
-</MenuItem>
-
+    {/* Duplicate */}
     <MenuItem
       onClick={() => {
-        handleMenuClose();                
-        setDeleteId(currentItem?.id);     
-        setIsModalOpen(true);             
+        handleDuplicateLayout(currentItem);
+        handleMenuClose();
       }}
-    >  
+      sx={{
+        '&:hover': {
+          backgroundColor: 'rgba(76, 175, 80, 0.1)', // light green
+          '& .MuiListItemIcon-root, & .MuiTypography-root': {
+            color: '#4caf50' // green
+          }
+        }
+      }}
+    >
       <ListItemIcon>
-
-        <RiDeleteBin6Line  />
+        <IoDuplicate />
       </ListItemIcon>
-      <Typography style={{fontSize:'10px'}}>Delete</Typography>
+      <Typography style={{ fontSize: '10px' }}>Duplicate</Typography>
     </MenuItem>
-  </Menu>)
+
+    {/* Delete */}
+    <MenuItem
+      onClick={() => {
+        handleMenuClose();
+        setDeleteId(currentItem?.id);
+        setIsModalOpen(true);
+      }}
+      sx={{
+        '&:hover': {
+          backgroundColor: 'rgba(244, 67, 54, 0.1)',
+          '& .MuiListItemIcon-root, & .MuiTypography-root': {
+            color: '#f44336'
+          }
+        }
+      }}
+    >
+      <ListItemIcon>
+        <RiDeleteBin6Line />
+      </ListItemIcon>
+      <Typography style={{ fontSize: '10px' }}>Delete</Typography>
+    </MenuItem>
+
+  </Menu>
+);
+
+
 
   return (
 <div
