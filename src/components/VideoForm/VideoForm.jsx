@@ -1,6 +1,7 @@
 // VideoForm.jsx
 import { useState, useContext } from "react";
 import { PlaylistContext } from "../../App";
+import MediaCards from "./MediaCard"; // Import the MediaCards component
 
 const VideoForm = () => {
   const [playlistNameInput, setPlaylistNameInput] = useState("");
@@ -11,24 +12,27 @@ const VideoForm = () => {
   const handleInputChange = (e) => {
     setPlaylistNameInput(e.target.value);
     setPlaylistName(e.target.value); // Update global playlist name
-    // setPlaylistNameInput()
   };
 
-  // console.log("true + false :>> ", true + false);
-
   return (
-    <form className="p-6 w-full mx-auto bg-#f7f8fa shadow-md rounded-md">
-      <div className="flex items-center gap-4 mt-2">
-        <label className="text-sm font-medium">Playlist Name:</label>
-        <input
-          type="text"
-          value={playlistNameInput}
-          onChange={handleInputChange} // Use handleInputChange to update the global state
-          className="border border-gray-300 p-1 rounded flex-1"
-          placeholder="Playlist Name"
-        />
-      </div>
-    </form>
+    <>
+      {/* Add MediaCards component below the form */}
+      <MediaCards />
+
+      <form className="p-6 w-full mx-auto bg-#f7f8fa shadow-md rounded-md">
+        <div className="flex items-center gap-4 mt-2">
+          <label className="text-sm font-medium">Playlist Name:</label>
+          <input
+            type="text"
+            value={playlistNameInput}
+            onChange={handleInputChange}
+            className="border border-gray-300 p-1 rounded flex-1"
+            placeholder="Playlist Name"
+          />
+        </div>
+      </form>
+      
+    </>
   );
 };
 

@@ -4,7 +4,7 @@ import Preview from "./Preview";
 import { FaImage } from "react-icons/fa6";
 import { FaFileVideo } from "react-icons/fa";
 import { RiCloseCircleLine } from "react-icons/ri";
-
+import './Timeline.css';
 
 const Timeline = ({ layout, onCancle }) => {
   const [divisionsMedia, setDivisionsMedia] = useState({});
@@ -14,42 +14,98 @@ const Timeline = ({ layout, onCancle }) => {
 // for timeline chatpgt code
 // Top of component
 const durationRef = useRef(null);
-const [durationMode, setDurationMode] = useState("Automatic"); // or "Manual"
-const [totalDuration, setTotalDuration] = useState(0);
+const [durationMode, setDurationMode] = useState("Automatic");
+const [totalDuration, setTotalDuration] = useState(5);
+const [showConfirmModal, setShowConfirmModal] = useState(false);
+const [pendingDuration, setPendingDuration] = useState(5);
+const [affectedDivision, setAffectedDivision] = useState(null);
+const [previousDuration, setPreviousDuration] = useState(5);
+
+
 // for manual duration meida
 
   const mediaRef = useRef(null);
+// put near the top of Timeline component (after your other refs/state)
+const PIXELS_PER_SECOND = 10; // tune this: larger = faster width growth per px
+const MIN_DURATION = 1;
+const MAX_DURATION = 600; // optional cap (seconds)
+const resizingRef = useRef(false); // keep track of active resize
+const baseColors = [
+  "#fff7cc",
+  "#f2fbff",
+  "#f9f2ff",
+  "#fff2f5"
+];
+
+function darkenColor(hex, amount = 20) {
+  let col = hex.replace("#", "");
+  if (col.length === 3) {
+    col = col.split('').map(c => c + c).join('');
+  }
+
+  const r = Math.max(0, parseInt(col.substring(0, 2), 16) - amount);
+  const g = Math.max(0, parseInt(col.substring(2, 4), 16) - amount);
+  const b = Math.max(0, parseInt(col.substring(4, 6), 16) - amount);
+
+  return `#${[r, g, b].map(x => x.toString(16).padStart(2, '0')).join('')}`;
+}
+
+function getRandomGradient(mediaId) {
+  const hash = [...mediaId].reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const base = baseColors[hash % baseColors.length];
+  return darkenColor(base, 20); // Increase amount for darker shade
+}
 
   const handleDragOver = (e) => {
     e.preventDefault();
   };
 
-  const handleDrop = (e, index) => {
-    e.preventDefault();
-    const mediaSrc = e.dataTransfer.getData("mediaSrc");
-    const mediaId = e.dataTransfer.getData("mediaId");
-    const mediaType = e.dataTransfer.getData("mediaType");
 
-    // Only add the media if it's valid (image or video type)
-    if (mediaSrc && (mediaType === "image" || mediaType === "video")) {
-      setDivisionsMedia((prevState) => {
-        const divisionMedia = prevState[index] || [];
-        return {
-          ...prevState,
-          [index]: [
-            ...divisionMedia,
-            {
-              mediaSrc,
-              mediaId,
-              mediaType,
-              appearanceTime: 3,
-              duration: mediaType === "video" ? undefined : 3000,
-            },
-          ],
-        };
-      });
+  const getRemainingDuration = (divisionIndex) => {
+  if (durationMode !== "Manual") return totalDuration;
+  
+  const usedDuration = divisionsMedia[divisionIndex]?.reduce((sum, media) => sum + media.appearanceTime, 0) || 0;
+  return Math.max(0, totalDuration - usedDuration);
+};
+
+
+const handleDrop = (e, index) => {
+  e.preventDefault();
+  const mediaSrc = e.dataTransfer.getData("mediaSrc");
+  const mediaId = e.dataTransfer.getData("mediaId");
+  const mediaType = e.dataTransfer.getData("mediaType");
+
+  // Only add the media if it's valid (image or video type)
+  if (mediaSrc && (mediaType === "image" || mediaType === "video")) {
+    if (durationMode === "Manual") {
+      const remainingDuration = getRemainingDuration(index);
+      if (remainingDuration <= 0) {
+        alert("No remaining duration available for this division");
+        return;
+      }
     }
-  };
+
+    setDivisionsMedia((prevState) => {
+      const divisionMedia = prevState[index] || [];
+      const newAppearanceTime = durationMode === "Manual" ? getRemainingDuration(index) : 5;
+      
+      return {
+        ...prevState,
+        [index]: [
+          ...divisionMedia,
+          {
+            mediaSrc,
+            mediaId,
+            mediaType,
+            appearanceTime: newAppearanceTime,
+            duration: mediaType === "video" ? undefined : newAppearanceTime * 1000,
+          },
+        ],
+      };
+    });
+  }
+};
+
 
   const handleDragStart = (divisionIndex, mediaIndex) => {
     setDraggedMedia({ divisionIndex, mediaIndex });
@@ -110,7 +166,21 @@ const [totalDuration, setTotalDuration] = useState(0);
   };
 
 const handleAppearanceTimeChange = (e, divisionIndex, mediaIndex) => {
-  const newTime = Math.max(1, parseInt(e.target.value, 10) || 1); // No maximum limit
+  const newTime = Math.max(1, parseInt(e.target.value, 10) || 1);
+  
+  if (durationMode === "Manual") {
+    // Calculate current used duration excluding the media being changed
+    const currentUsedDuration = divisionsMedia[divisionIndex]
+      .filter((_, idx) => idx !== mediaIndex)
+      .reduce((sum, media) => sum + media.appearanceTime, 0);
+    
+    const maxAllowedTime = totalDuration - currentUsedDuration;
+    
+    if (newTime > maxAllowedTime) {
+      alert(`Cannot exceed ${maxAllowedTime}s. Total duration is ${totalDuration}s`);
+      return;
+    }
+  }
 
   setDivisionsMedia((prevState) => {
     const updatedMedia = prevState[divisionIndex].map((media, idx) =>
@@ -122,6 +192,55 @@ const handleAppearanceTimeChange = (e, divisionIndex, mediaIndex) => {
     };
   });
 };
+
+
+const handleResizeStart = (e, divisionIndex, mediaIndex, initialTime) => {
+  e.preventDefault();
+  const startX = e.clientX;
+  const startDuration = Number(initialTime) || MIN_DURATION;
+  resizingRef.current = true;
+  const previousUserSelect = document.body.style.userSelect;
+  document.body.style.userSelect = "none";
+
+  const onPointerMove = (moveEvent) => {
+    const clientX = moveEvent.clientX;
+    const deltaX = clientX - startX;
+    const deltaSeconds = deltaX / PIXELS_PER_SECOND;
+    let newDuration = Math.round(startDuration + deltaSeconds);
+
+    if (newDuration < MIN_DURATION) newDuration = MIN_DURATION;
+    if (MAX_DURATION && newDuration > MAX_DURATION) newDuration = MAX_DURATION;
+
+    // Manual mode constraint
+    if (durationMode === "Manual") {
+      const currentUsedDuration = divisionsMedia[divisionIndex]
+        .filter((_, idx) => idx !== mediaIndex)
+        .reduce((sum, media) => sum + media.appearanceTime, 0);
+      
+      const maxAllowedDuration = totalDuration - currentUsedDuration;
+      if (newDuration > maxAllowedDuration) newDuration = maxAllowedDuration;
+    }
+
+    setDivisionsMedia((prevState) => {
+      const divisionArr = Array.isArray(prevState[divisionIndex]) ? [...prevState[divisionIndex]] : [];
+      const updated = divisionArr.map((m, idx) =>
+        idx === mediaIndex ? { ...m, appearanceTime: newDuration } : m
+      );
+      return { ...prevState, [divisionIndex]: updated };
+    });
+  };
+
+  const onPointerUp = () => {
+    resizingRef.current = false;
+    document.removeEventListener("pointermove", onPointerMove);
+    document.removeEventListener("pointerup", onPointerUp);
+    document.body.style.userSelect = previousUserSelect || "";
+  };
+
+  document.addEventListener("pointermove", onPointerMove);
+  document.addEventListener("pointerup", onPointerUp);
+};
+
 
 
 const renderDivisions = () => {
@@ -136,92 +255,133 @@ const renderDivisions = () => {
       >
         {/* <p className="font-bold" style={{fontSize:'10px'}}>Division {index + 1}</p> */}
         {divisionsMedia[index] && (
-          <div className="flex flex-wrap gap-3">
-    
+          <div className="flex flex-wrap" >
+
+
 {divisionsMedia[index].map((media, mediaIndex) => (
-  <div
-    key={mediaIndex}
-    className="flex items-center gap-3 w-[240px] border border-blue-200 p-3 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md cursor-pointer relative hover:shadow-lg hover:scale-[1.01] transition-all duration-200"
-    draggable
-    onDragStart={() => handleDragStart(index, mediaIndex)}
-    onDrop={() => handleDropMedia(index, mediaIndex)}
-    onDragOver={(e) => e.preventDefault()}
-    onClick={(e) => {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const cardWidth = rect.width;
-      
-      // Calculate duration - unlimited max
-      const maxDuration = Math.max(60, media.appearanceTime * 2);
-      let newDuration = Math.round((clickX / cardWidth) * maxDuration);
-      newDuration = Math.max(1, newDuration);
-      
-      handleAppearanceTimeChange({ target: { value: newDuration } }, index, mediaIndex);
-    }}
-    
-  >
-    {/* Media Icon */}
-    <div className={`rounded-full p-2 shadow-md ${
-      media.mediaType === "video" 
-        ? "bg-gradient-to-br from-red-400 to-pink-500" 
-        : "bg-gradient-to-br from-green-400 to-blue-500"
-    }`}>
-      {media.mediaType === "video" ? (
-        <FaFileVideo className="text-white text-lg" />
-      ) : (
-        <FaImage className="text-white text-lg" />
-      )}
-    </div>
-    
-    {/* Media Info */}
-    <div className="flex-1 min-w-0">
-      <span className="text-sm font-bold truncate block text-gray-800 mb-1">
-        {media.mediaId}
-      </span>
-      <div className="flex items-center gap-1">
-        <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-        <span className="text-xs text-gray-600 font-medium">
-          {media.mediaType === "video" ? "Video" : "Image"}
-        </span>
-      </div>
-    </div>
-    
-    {/* Duration Input */}
-    <div className="bg-white rounded-lg px-2 py-1 shadow-sm border">
-      <input 
-        type="number"
-        min="1"
-        value={media.appearanceTime}
-        onChange={(e) => {
-          const newTime = Math.max(1, parseInt(e.target.value, 10) || 1);
-          handleAppearanceTimeChange({ target: { value: newTime } }, index, mediaIndex);
-        }}
-        onClick={(e) => e.stopPropagation()}
-        className="w-12 text-xs font-bold text-indigo-600 bg-transparent border-none outline-none text-center"
-      />
-      <span className="text-xs text-indigo-500">s</span>
-    </div>
-    
-    {/* Progress Bar */}
-    <div 
-      className="absolute bottom-0 left-0 h-1.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-b-xl"
-      style={{ 
-        width: `${Math.min(100, (media.appearanceTime / Math.max(30, media.appearanceTime)) * 100)}%`,
-        transition: 'width 0.3s ease'
-      }}
-    />
-    
-    {/* Remove Button */}
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        handleRemoveMedia(index, mediaIndex);
-      }}
-      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors shadow-md"
-    >
-      <RiCloseCircleLine className="text-sm" />
-    </button>
+
+
+<div
+  key={mediaIndex}
+  className="relative timeline-media-slider"
+  style={{
+    width: `${Math.max(MIN_DURATION, media.appearanceTime) * PIXELS_PER_SECOND}px`,
+    minWidth: `${Math.max(80, MIN_DURATION * PIXELS_PER_SECOND)}px`,
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    padding: "0 8px",
+    userSelect: "none",
+    height: "60px",
+    borderRadius: "6px",
+    boxShadow: "0 2px 6px rgba(0,0,0,0.08)",
+    background: getRandomGradient(media.mediaId),
+    cursor: "move", // Changed to move cursor to indicate draggable
+  }}
+  // Add drag and drop event handlers
+  draggable={true}
+  onDragStart={() => handleDragStart(index, mediaIndex)}
+  onDragOver={(e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }}
+  onDrop={(e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleDropMedia(index, mediaIndex);
+  }}
+  onClick={() => handleMediaClick(index, mediaIndex)}
+>
+  {/* left icon */}
+  <div style={{ width: 28, display: "flex", justifyContent: "center", alignItems: "center" }}>
+    {media.mediaType === "video" ? <FaFileVideo size={20} className="text-black" /> : <FaImage size={20}  className="text-black" />}
   </div>
+
+  {/* label */}
+  <div style={{ flex: 1, paddingLeft: 8, overflow: "hidden" }}>
+    <div className="text-xs font-semibold truncate">{media.mediaId}</div>
+    <div style={{ fontSize: 11, opacity: 0.9 }}>{media.appearanceTime}s</div>
+  </div>
+
+  {/* Close button */}
+  <div
+    onClick={(e) => {
+      e.stopPropagation();
+      handleRemoveMedia(index, mediaIndex);
+    }}
+    style={{
+      position: "absolute",
+      top: "-6px",
+      right: "-6px",
+      background: "#fff",
+      borderRadius: "50%",
+      width: 18,
+      height: 18,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
+      cursor: "pointer",
+      zIndex: 10,
+    }}
+  >
+    <RiCloseCircleLine size={16} color="#f00" />
+  </div>
+
+            {/* {selectedMedia &&
+  selectedMedia.divisionIndex === index &&
+  selectedMedia.mediaIndex === mediaIndex && (
+    <div  className="absolute top-[-40px] left-0 bg-white p-2 border border-gray-300 shadow-lg rounded z-20">
+      <label style={{alignItems:'center'}} className="flex mb-1 text-xs font-medium">
+        Sec:
+        <input
+          type="number"
+          value={media.appearanceTime}
+          min="1"
+          onChange={(e) =>
+            handleAppearanceTimeChange(e, index, mediaIndex)
+          }
+          className="ml-1 w-12 p-1 border rounded text-xs"
+        />
+      </label>
+      <button
+        onClick={() => handleRemoveMedia(index, mediaIndex)}
+        className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 text-xs"
+      >
+        Remove
+      </button>
+    </div>
+  )} */}
+
+
+  {/* Right resize handle */}
+  <div
+    role="slider"
+    aria-valuenow={media.appearanceTime}
+    aria-label="Resize duration"
+    style={{
+      position: "absolute",
+      right: 0,
+      top: 0,
+      height: "100%",
+      width: "10px",
+      cursor: "ew-resize",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      background: "rgba(255,255,255,0.06)",
+      borderTopRightRadius: 6,
+      borderBottomRightRadius: 6,
+    }}
+    onPointerDown={(ev) => {
+      ev.stopPropagation();
+      handleResizeStart(ev, index, mediaIndex, media.appearanceTime);
+    }}
+  >
+    {/* visual grip */}
+    <div style={{ width: 3, height: 20, background: "black", borderRadius: 2 }} />
+  </div>
+</div>
 ))}
 
 
@@ -282,26 +442,60 @@ const renderDivisions = () => {
     </svg>
   </span>
 
-  <input
-    ref={durationRef}
-    type="number"
-    min="1"
-    value={totalDuration}
-    disabled={durationMode === "Automatic"}
-    className={`w-16 px-2 py-1 border border-gray-300 rounded text-sm ${
-      durationMode === "Automatic" ? "cursor-not-allowed bg-gray-100" : ""
-    }`}
-  />
+<input
+  ref={durationRef}
+  type="number"
+  min="1"
+  value={totalDuration}
+  disabled={durationMode === "Automatic"}
+  onChange={(e) => {
+    if (durationMode === "Manual") {
+      const newValue = Math.max(1, parseInt(e.target.value) || 5);
+      setTotalDuration(newValue);
+    }
+  }}
+  onBlur={(e) => {
+    if (durationMode === "Manual") {
+      const newValue = Math.max(1, parseInt(e.target.value) || 5);
+      
+      // Only show confirmation if duration was decreased
+      if (newValue < previousDuration) {
+        // Check which division will be affected (the one with longest duration)
+        let maxDivisionIndex = null;
+        let maxDuration = 0;
+        
+        Object.entries(divisionsMedia).forEach(([index, mediaList]) => {
+          const total = mediaList.reduce((sum, m) => sum + m.appearanceTime, 0);
+          if (total > maxDuration) {
+            maxDuration = total;
+            maxDivisionIndex = index;
+          }
+        });
+        
+        if (maxDivisionIndex !== null) {
+          setPendingDuration(newValue);
+          setAffectedDivision(maxDivisionIndex);
+          setShowConfirmModal(true);
+        }
+      }
+      setPreviousDuration(newValue);
+    }
+  }}
+  className={`w-16 px-2 py-1 border border-gray-300 rounded text-sm ${
+    durationMode === "Automatic" ? "cursor-not-allowed bg-gray-100" : ""
+  }`}
+/>
 
 
-  <select
-    value={durationMode}
-    onChange={(e) => setDurationMode(e.target.value)}
-    className="border border-gray-300 rounded px-2 py-1 text-sm"
-  >
-    {/* <option>Manual</option> */}
-    <option>Automatic</option>
-  </select>
+<select
+  value={durationMode}
+  onChange={(e) => setDurationMode(e.target.value)}
+  className="border border-gray-300 rounded px-2 py-1 text-sm"
+>
+  <option>Manual</option>
+  <option>Automatic</option>
+</select>
+
 </div>
 
         </div>
@@ -411,6 +605,54 @@ const scaleY = previewHeight / layout.height;
                 />
               </div>
             )}
+
+{showConfirmModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white p-4 rounded-lg max-w-sm w-full">
+      <h3 className="font-bold text-lg mb-2">Confirm Duration Change</h3>
+      <p className="mb-4 text-sm">
+        Reducing duration will equally distribute the new duration ({pendingDuration}s) 
+        among all media in this division. Continue?
+      </p>
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={() => setShowConfirmModal(false)}
+          className="px-3 py-1 bg-gray-300 rounded text-sm"
+        >
+          Cancel
+        </button>
+        <button
+onClick={() => {
+  setTotalDuration(pendingDuration);
+  
+  // Equalize durations for all media in the affected division
+  if (affectedDivision !== null && divisionsMedia[affectedDivision]) {
+    const mediaCount = divisionsMedia[affectedDivision].length;
+    const equalDuration = Math.max(1, Math.floor(pendingDuration / mediaCount));
+    
+    setDivisionsMedia(prev => ({
+      ...prev,
+      [affectedDivision]: prev[affectedDivision].map(media => ({
+        ...media,
+        appearanceTime: equalDuration
+      }))
+    }));
+  }
+  
+  setPreviousDuration(pendingDuration);
+  setShowConfirmModal(false);
+}}
+          className="px-3 py-1 bg-blue-500 text-white rounded text-sm"
+        >
+          Confirm
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
+
           </div>
         )}
       </div>
