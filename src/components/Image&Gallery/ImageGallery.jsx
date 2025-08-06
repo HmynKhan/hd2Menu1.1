@@ -123,7 +123,7 @@ const ImageGallery = () => {
                   >
                     <div className="h-full flex items-center justify-center">
                       <DraggableMedia
-                        id={file.id}
+                        id={file?.name || file?.id}
                         src={`${baseURL}/${file.file_path}`}
                         type={file.file_type === "mp4" ? "video" : "image"}
                       />

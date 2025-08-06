@@ -54,7 +54,7 @@ function darkenColor(hex, amount = 20) {
 function getRandomGradient(mediaId) {
   const hash = [...mediaId].reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const base = baseColors[hash % baseColors.length];
-  return darkenColor(base, 20); // Increase amount for darker shade
+  return base; // Increase amount for darker shade
 }
 
   const handleDragOver = (e) => {
@@ -304,8 +304,8 @@ const renderDivisions = () => {
 {divisionsMedia[index].map((media, mediaIndex) => (
   (() => {
     const bgColor = getRandomGradient(media.mediaId);
-    const borderColor = darkenColor(bgColor, 80); // Adjust darkness as needed
-    console.log("media",media);
+    const borderColor = darkenColor(bgColor, 50); // Adjust darkness as needed
+    console.log("ba56",media);
 
     return (
       <div
@@ -313,18 +313,18 @@ const renderDivisions = () => {
         className="relative timeline-media-slider"
         style={{
           width: `${Math.max(MIN_DURATION, media.appearanceTime) * PIXELS_PER_SECOND}px`,
-          minWidth: `${Math.max(80, MIN_DURATION * PIXELS_PER_SECOND)}px`,
+          minWidth: `${Math.max(150, MIN_DURATION * PIXELS_PER_SECOND)}px`,
           position: "relative",
           display: "flex",
           alignItems: "center",
           padding: "0 8px",
           userSelect: "none",
           height: "60px",
-          borderRadius: "6px",
+          // borderRadius: "6px",
           boxShadow: "0 2px 6px rgba(0,0,0,0.08)",
           background: bgColor,
           cursor: "move",
-          border: `3px solid ${borderColor}`,
+          border: `2px solid ${borderColor}`,
         }}
         draggable={true}
         onDragStart={() => handleDragStart(index, mediaIndex)}
