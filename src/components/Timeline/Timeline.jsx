@@ -21,6 +21,7 @@ const [pendingDuration, setPendingDuration] = useState(5);
 const [affectedDivision, setAffectedDivision] = useState(null);
 const [previousDuration, setPreviousDuration] = useState(5);
 
+console.log("selectedMedia",selectedMedia)
 
 // for manual duration meida
 
@@ -34,7 +35,7 @@ const baseColors = [
   "#fff7cc",
   "#f2fbff",
   "#f9f2ff",
-  "#fff2f5"
+  "#fff2f5",
 ];
 
 function darkenColor(hex, amount = 20) {
@@ -88,7 +89,6 @@ const handleDrop = (e, index) => {
     setDivisionsMedia((prevState) => {
       const divisionMedia = prevState[index] || [];
       const newAppearanceTime = durationMode === "Manual" ? getRemainingDuration(index) : 5;
-      
       return {
         ...prevState,
         [index]: [
@@ -194,6 +194,48 @@ const handleAppearanceTimeChange = (e, divisionIndex, mediaIndex) => {
 };
 
 
+const renderTimelineScale = () => {
+  if (totalDuration <= 0) return null;
+
+  // Calculate the total width in pixels based on the longest duration
+  const totalWidth = totalDuration * PIXELS_PER_SECOND;
+  const scaleMarks = [];
+  const step = totalDuration <= 10 ? 1 : Math.ceil(totalDuration / 10);
+  
+  for (let i = 0; i <= totalDuration; i += step) {
+    scaleMarks.push(
+      <div 
+        key={i}
+        style={{
+          position: 'absolute',
+          left: `${(i * PIXELS_PER_SECOND)}px`,
+          height: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}
+      >
+        <div style={{ width: '1px', height: '10px', background: 'black' }} />
+        <div style={{ fontSize: '10px', color: 'black' }}>{i}s</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      position: 'relative',
+      height: '30px',
+      marginBottom: '10px',
+      width: `${totalWidth}px`,
+      borderBottom: '1px solid #0077b5',
+    }}>
+      {scaleMarks}
+    </div>
+  );
+};
+
+
+
 const handleResizeStart = (e, divisionIndex, mediaIndex, initialTime) => {
   e.preventDefault();
   const startX = e.clientX;
@@ -244,7 +286,9 @@ const handleResizeStart = (e, divisionIndex, mediaIndex, initialTime) => {
 
 
 const renderDivisions = () => {
-    return layout.divisions.map((division, index) => (
+
+
+  return layout.divisions.map((division, index) => (
       
       <div
         key={index}
@@ -253,136 +297,143 @@ const renderDivisions = () => {
         onDrop={(e) => handleDrop(e, index)}
         style={{ minHeight: "60px" }}
       >
+
         {/* <p className="font-bold" style={{fontSize:'10px'}}>Division {index + 1}</p> */}
         {divisionsMedia[index] && (
           <div className="flex flex-wrap" >
-
-
 {divisionsMedia[index].map((media, mediaIndex) => (
+  (() => {
+    const bgColor = getRandomGradient(media.mediaId);
+    const borderColor = darkenColor(bgColor, 80); // Adjust darkness as needed
+    console.log("media",media);
 
-
-<div
-  key={mediaIndex}
-  className="relative timeline-media-slider"
-  style={{
-    width: `${Math.max(MIN_DURATION, media.appearanceTime) * PIXELS_PER_SECOND}px`,
-    minWidth: `${Math.max(80, MIN_DURATION * PIXELS_PER_SECOND)}px`,
-    position: "relative",
-    display: "flex",
-    alignItems: "center",
-    padding: "0 8px",
-    userSelect: "none",
-    height: "60px",
-    borderRadius: "6px",
-    boxShadow: "0 2px 6px rgba(0,0,0,0.08)",
-    background: getRandomGradient(media.mediaId),
-    cursor: "move", // Changed to move cursor to indicate draggable
-  }}
-  // Add drag and drop event handlers
-  draggable={true}
-  onDragStart={() => handleDragStart(index, mediaIndex)}
-  onDragOver={(e) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }}
-  onDrop={(e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    handleDropMedia(index, mediaIndex);
-  }}
-  onClick={() => handleMediaClick(index, mediaIndex)}
->
-  {/* left icon */}
-  <div style={{ width: 28, display: "flex", justifyContent: "center", alignItems: "center" }}>
-    {media.mediaType === "video" ? <FaFileVideo size={20} className="text-black" /> : <FaImage size={20}  className="text-black" />}
-  </div>
-
-  {/* label */}
-  <div style={{ flex: 1, paddingLeft: 8, overflow: "hidden" }}>
-    <div className="text-xs font-semibold truncate">{media.mediaId}</div>
-    <div style={{ fontSize: 11, opacity: 0.9 }}>{media.appearanceTime}s</div>
-  </div>
-
-  {/* Close button */}
-  <div
-    onClick={(e) => {
-      e.stopPropagation();
-      handleRemoveMedia(index, mediaIndex);
-    }}
-    style={{
-      position: "absolute",
-      top: "-6px",
-      right: "-6px",
-      background: "#fff",
-      borderRadius: "50%",
-      width: 18,
-      height: 18,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
-      cursor: "pointer",
-      zIndex: 10,
-    }}
-  >
-    <RiCloseCircleLine size={16} color="#f00" />
-  </div>
-
-            {/* {selectedMedia &&
-  selectedMedia.divisionIndex === index &&
-  selectedMedia.mediaIndex === mediaIndex && (
-    <div  className="absolute top-[-40px] left-0 bg-white p-2 border border-gray-300 shadow-lg rounded z-20">
-      <label style={{alignItems:'center'}} className="flex mb-1 text-xs font-medium">
-        Sec:
-        <input
-          type="number"
-          value={media.appearanceTime}
-          min="1"
-          onChange={(e) =>
-            handleAppearanceTimeChange(e, index, mediaIndex)
-          }
-          className="ml-1 w-12 p-1 border rounded text-xs"
-        />
-      </label>
-      <button
-        onClick={() => handleRemoveMedia(index, mediaIndex)}
-        className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 text-xs"
+    return (
+      <div
+        key={mediaIndex}
+        className="relative timeline-media-slider"
+        style={{
+          width: `${Math.max(MIN_DURATION, media.appearanceTime) * PIXELS_PER_SECOND}px`,
+          minWidth: `${Math.max(80, MIN_DURATION * PIXELS_PER_SECOND)}px`,
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+          padding: "0 8px",
+          userSelect: "none",
+          height: "60px",
+          borderRadius: "6px",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.08)",
+          background: bgColor,
+          cursor: "move",
+          border: `3px solid ${borderColor}`,
+        }}
+        draggable={true}
+        onDragStart={() => handleDragStart(index, mediaIndex)}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleDropMedia(index, mediaIndex);
+        }}
+        onClick={() => handleMediaClick(index, mediaIndex)}
       >
-        Remove
-      </button>
-    </div>
-  )} */}
+        {/* Left icon */}
+        <div style={{ width: 28, display: "flex", justifyContent: "center", alignItems: "center" }}>
+          {media.mediaType === "video" ? (
+            <FaFileVideo size={20} style={{ color: borderColor }} />
+          ) : (
+            <FaImage size={20} style={{ color: borderColor }} />
+          )}
+        </div>
 
+        {/* Label */}
+        <div style={{ flex: 1, paddingLeft: 8, overflow: "hidden" }}>
+          <div className="text-xs font-semibold truncate" style={{ color: 'black' }}>
+            {media.mediaId}
+          </div>
+          <div style={{ fontSize: 11, color: 'black' }}>
+            {media.appearanceTime}s
+          </div>
+        </div>
 
-  {/* Right resize handle */}
-  <div
-    role="slider"
-    aria-valuenow={media.appearanceTime}
-    aria-label="Resize duration"
-    style={{
-      position: "absolute",
-      right: 0,
-      top: 0,
-      height: "100%",
-      width: "10px",
-      cursor: "ew-resize",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      background: "rgba(255,255,255,0.06)",
-      borderTopRightRadius: 6,
-      borderBottomRightRadius: 6,
-    }}
-    onPointerDown={(ev) => {
-      ev.stopPropagation();
-      handleResizeStart(ev, index, mediaIndex, media.appearanceTime);
-    }}
-  >
-    {/* visual grip */}
-    <div style={{ width: 3, height: 20, background: "black", borderRadius: 2 }} />
-  </div>
-</div>
+        {/* Close button */}
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            handleRemoveMedia(index, mediaIndex);
+          }}
+          style={{
+            position: "absolute",
+            top: "-6px",
+            right: "-6px",
+            background: "#fff",
+            borderRadius: "50%",
+            width: 18,
+            height: 18,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
+            cursor: "pointer",
+            zIndex: 10,
+            border: `1px solid ${borderColor}`,
+          }}
+        >
+          <RiCloseCircleLine size={16} color='red' />
+        </div>
+
+        {/* Right resize handle */}
+        <div
+          role="slider"
+          aria-valuenow={media.appearanceTime}
+          aria-label="Resize duration"
+          style={{
+            position: "absolute",
+            right: 0,
+            top: 0,
+            height: "100%",
+            width: "14px",
+            cursor: "col-resize",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: borderColor,
+            borderTopRightRadius: 6,
+            borderBottomRightRadius: 6,
+          }}
+          onPointerDown={(ev) => {
+            ev.stopPropagation();
+            handleResizeStart(ev, index, mediaIndex, media.appearanceTime);
+          }}
+        >
+          {/* Grip lines */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "2px"
+          }}>
+            <div style={{
+              width: "2px",
+              height: "20px",
+              background: "white",
+              borderRadius: "1px"
+            }} />
+            <div style={{
+              width: "2px",
+              height: "20px",
+              background: "white",
+              borderRadius: "1px"
+            }} />
+          </div>
+        </div>
+      </div>
+    );
+  })()
 ))}
+
 
 
           </div>
@@ -569,6 +620,7 @@ const scaleY = previewHeight / layout.height;
 
             {/* Right: Actual Division Render */}
             <div style={{ flex: 1 }}>
+            {/* {renderTimelineScale()} */}
               {renderDivisions()[index]}
             </div>
           </div>
