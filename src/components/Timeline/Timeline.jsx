@@ -305,7 +305,7 @@ const renderDivisions = () => {
   (() => {
     const bgColor = getRandomGradient(media.mediaId);
     const borderColor = darkenColor(bgColor, 50); // Adjust darkness as needed
-    console.log("ba56",media);
+    {/* console.log("ba56",media); */}
 
     return (
       <div
