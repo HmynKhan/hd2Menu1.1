@@ -32,9 +32,12 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
 
   // for api upload video playlistname start
   const { playlistName } = useContext(PlaylistContext) || {};
-  const videoName = playlistName?.trim() || `default-playlist-${Date.now()}`;
+  const videoName = playlistName?.trim() ||   `playlist-${Date.now().toString(36)}`;
   // for api upload video playlistname end
   // for api authentication end
+  // Add this state at the top with other states
+  const [isVideoComplete, setIsVideoComplete] = useState(false);
+console.log('1212',`default-playlist-${Date.now().toString(36)}`)
 
   const resolutionMap = {
     hd: { width: 1280, height: 720 },
@@ -53,19 +56,22 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
     resolutionMap[selectedResolution];
 
   // play layout again code start
-  const handlePlay = () => {
-    if (isPlaying) return;
+const handlePlay = () => {
+  if (isPlaying) return;
 
-    setIsPlaying(true);
-    setStartTime(Date.now());
-    setProgress(0);
-    setShouldStopCycling(false);
-    // Automatically stop cycling when progress bar reaches 100%
-    setTimeout(() => {
-      setShouldStopCycling(true);
-      setIsPlaying(false);
-    }, totalDuration * 1000);
-  };
+  setIsVideoComplete(false); // Reset completion state when playing again
+  setIsPlaying(true);
+  setStartTime(Date.now());
+  setProgress(0);
+  setShouldStopCycling(false);
+  
+  // Automatically stop cycling when progress bar reaches 100%
+  setTimeout(() => {
+    setShouldStopCycling(true);
+    setIsPlaying(false);
+    setIsVideoComplete(true); // Mark as complete when duration finishes
+  }, totalDuration * 1000);
+};
 
   // play layout again code end
   const layoutRef = useRef(null);
@@ -114,26 +120,26 @@ const Preview = ({ layout, onClose, divisionsMedia = {} }) => {
   const [startTime, setStartTime] = useState(Date.now());
 
   // console.log("totalDuration in review : ", totalDuration);
-  useEffect(() => {
-    if (totalDuration === 0) return;
+useEffect(() => {
+  if (totalDuration === 0) return;
 
-    const intervalId = setInterval(() => {
-      const elapsedTime = (Date.now() - startTime) / 1000; // Convert to seconds
-      const progressPercentage = Math.min(
-        (elapsedTime / totalDuration) * 100,
-        100
-      );
-      setProgress(progressPercentage);
+  const intervalId = setInterval(() => {
+    const elapsedTime = (Date.now() - startTime) / 1000;
+    const progressPercentage = Math.min(
+      (elapsedTime / totalDuration) * 100,
+      100
+    );
+    setProgress(progressPercentage);
 
-      // Stop media cycling and video when progress reaches 100%
-      if (progressPercentage >= 100) {
-        clearInterval(intervalId);
-        setShouldStopCycling(true); // Stop cycling
-      }
-    }, 100);
+    if (progressPercentage >= 100) {
+      clearInterval(intervalId);
+      setShouldStopCycling(true);
+      setIsVideoComplete(true); // Video is complete
+    }
+  }, 100);
 
-    return () => clearInterval(intervalId);
-  }, [startTime, totalDuration]);
+  return () => clearInterval(intervalId);
+}, [startTime, totalDuration]);
 
   // Custom hook to manage media cycling start
   // now again we change in usemediacycle
@@ -651,11 +657,11 @@ const scaleY = stageHeight / layout.height; // Adjust Y based on scaled height
       }}
     >
 <div
-  className="bg-white p-5  rounded"
+  className="bg-white p-3  rounded"
   style={{
     width: layout.orientation === "portrait" ? "880px" : "1220px",
     height: layout.orientation === "portrait" ? "850px" : "600px",
-    backgroundColor: "#F3E5AB",
+    backgroundColor: "#e0e5e9",
   }}
 >
         <div className="flex justify-between items-center mb-4">
@@ -675,15 +681,16 @@ const scaleY = stageHeight / layout.height; // Adjust Y based on scaled height
             className="ml-auto flex items-center space-x-2"
             style={{ marginRight: "43px" }}
           >
-            <button
-              className={`w-15 h-15 ${
-                isPlaying
-                  ? "bg-gray-400 cursor-not-allowed" // Gray background and disabled cursor when loading
-                  : "bg-green-500 hover:bg-green-600 cursor-pointer"
-              } px-4 py-2 text-white rounded`}
-              onClick={handlePlay}
-              disabled={isPlaying} // Disable the button when the video is playing
-            >
+
+             <button
+  className={`w-15 h-15 ${
+    isPlaying || !isVideoComplete
+      ? "bg-gray-400 cursor-not-allowed"
+      : "bg-green-500 hover:bg-green-600 cursor-pointer"
+  } px-4 py-2 text-white rounded`}
+  onClick={handlePlay}
+  disabled={isPlaying || !isVideoComplete}
+>
               {isPlaying ? (
                 <svg
                   className="animate-spin h-5 w-5 text-gray-700" // Gray color for loader icon
@@ -710,15 +717,15 @@ const scaleY = stageHeight / layout.height; // Adjust Y based on scaled height
               )}
             </button>
 
-            <button
-              className={`w-15 h-15 px-4 py-2 ${
-                isDownloading
-                  ? "bg-gray-400 cursor-not-allowed" // Change cursor to 'not-allowed' when downloading
-                  : "bg-blue-500 hover:bg-blue-700 cursor-pointer"
-              } text-white rounded`}
-              onClick={handleDownload}
-              disabled={isDownloading} // Disable the button when downloading
-            >
+<button
+  className={`w-15 h-15 px-4 py-2 ${
+    isDownloading || !isVideoComplete
+      ? "bg-gray-400 cursor-not-allowed"
+      : "bg-blue-500 hover:bg-blue-700 cursor-pointer"
+  } text-white rounded`}
+  onClick={handleDownload}
+  disabled={isDownloading || !isVideoComplete}
+>
               {isDownloading ? (
                 <svg
                   className="animate-spin h-5 w-5 text-white"
@@ -757,16 +764,16 @@ const scaleY = stageHeight / layout.height; // Adjust Y based on scaled height
               <p className="text-xl">save</p>
             </button>*/}
 
-            <button
-              onClick={handleSaveAndOpenVideo}
-              className={`w-15 h-15 px-4 py-2 ${
-                isUploading
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-blue-500 hover:bg-blue-700 cursor-pointer"
-              } text-white rounded flex items-center justify-center`} // Flex to center content
-              disabled={isUploading} // Disable the button when uploading
-            >
-              {isUploading ? (
+ <button
+  className={`w-15 h-15 px-4 py-2 ${
+    isUploading || !isVideoComplete
+      ? "bg-gray-400 cursor-not-allowed"
+      : "bg-blue-500 hover:bg-blue-700 cursor-pointer"
+  } text-white rounded flex items-center justify-center`}
+  onClick={handleSaveAndOpenVideo}
+  disabled={isUploading || !isVideoComplete}
+>
+             {isUploading ? (
                 <svg
                   className="animate-spin h-5 w-5 text-white"
                   xmlns="http://www.w3.org/2000/svg"
@@ -904,10 +911,10 @@ let divisionHeight = d.height * scaleY;
           </Stage>
 
           {/* Progress bar */}
-          <div className="relative w-full mb-4 flex justify-center items-center">
+          <div className="relative w-full mb-1 flex justify-center items-center">
           <div
   className="bg-gray-300 h-2 rounded"
-  style={{ width: "60%" }}
+  style={{ width: "50%" }}
 >
 
               <div
@@ -924,6 +931,12 @@ let divisionHeight = d.height * scaleY;
               {formatTime(totalDuration)}
             </span>
           </div>
+
+
+ <p className="mb-1 text-md font-medium">
+        Allow this campaign to run to completion so you can replay, download, and upload it.
+      </p>
+
 
         </div>
       </div>

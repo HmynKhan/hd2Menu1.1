@@ -77,25 +77,38 @@ const cardData = [
         {cardData.map((card, index) => {
           const IconComponent = card.icon;
           return (
-            <div key={index} style={styles.mediaCard}>
+<div
+  key={index}
+  style={{
+    ...styles.mediaCard,
+    backgroundColor: card.title === "Campaign" ? "#ffe6e6" : "white",
+    border: card.title === "Campaign" ? "2px solid #d32f2f" : "none",
+  }}
+>
               <div style={styles.cardIcon}>
                 <IconComponent size={24} color="white" />
               </div>
-              <button
-                onClick={() => handleCardClick(card.route, card.external)}
-                style={styles.addBtn}
-                onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#d32f2f';
-                  e.target.style.color = '#fff';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = 'white';
-                  e.target.style.color = '#d32f2f';
-                }}
-              >
-                <span style={{ marginRight: '5px' }}>+</span>
-                {card.title}
-              </button>
+<button
+  onClick={() => handleCardClick(card.route, card.external)}
+  style={{
+    ...styles.addBtn,
+    backgroundColor: card.title === "Campaign" ? "#d32f2f" : "white",
+    color: card.title === "Campaign" ? "#fff" : "#d32f2f",
+  }}
+  onMouseEnter={(e) => {
+    e.target.style.backgroundColor = '#d32f2f';
+    e.target.style.color = '#fff';
+  }}
+  onMouseLeave={(e) => {
+    if (card.title !== "Campaign") { // keep Campaign selected
+      e.target.style.backgroundColor = 'white';
+      e.target.style.color = '#d32f2f';
+    }
+  }}
+>
+  <span style={{ marginRight: '5px' }}>+</span>
+  {card.title}
+</button>
             </div>
           );
         })}
@@ -123,7 +136,7 @@ const styles = {
     textAlign: 'center',
     transition: 'transform 0.2s',
     boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    cursor: 'pointer'
+    cursor: 'pointer',
   },
   cardIcon: {
     width: '50px',

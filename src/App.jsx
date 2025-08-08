@@ -132,7 +132,7 @@ const App = () => {
 
   return (
     <PlaylistContext.Provider value={{ playlistName, setPlaylistName }}>
-      <h1 className="mt-4 font-bold text-center text-5xl">hd2Menu</h1>
+      {/* <h1 className="mt-4 font-bold text-center text-5xl">hd2Menu</h1> */}
       <VideoForm />
 
       <SaveLayout

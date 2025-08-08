@@ -632,7 +632,13 @@ const scaleY = previewHeight / layout.height;
 
         {/* Buttons */}
         {layout && (
-          <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center justify-end mt-4 gap-2">
+            <button
+                        style={{fontSize:'10px'}}
+              className="px-2 py-1 text-white bg-green-500 hover:bg-green-700 cursor-pointer rounded"
+            >
+Save            </button>
+
             <button
             style={{fontSize:'10px'}}
               className="px-2 py-1 text-white bg-green-500 hover:bg-green-700 cursor-pointer rounded"

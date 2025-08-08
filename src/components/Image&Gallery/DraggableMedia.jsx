@@ -18,12 +18,12 @@ const DraggableMedia = ({ id, src, type, onSelect }) => {
         <img
           src={src}
           alt={`media-${id}`}
-          className="w-[130px] h-[70px] object-cover"
+          className="w-[200px] h-[100px] object-cover"
         />
       ) : (
         <video
           src={src}
-          className="w-[130px] h-[70px] object-cover"
+          className="w-[200px] h-[100px] object-cover"
           // autoPlay
           muted
           // loop

@@ -82,7 +82,9 @@ const ImageGallery = () => {
 
   return (
     <div className="p-2">
-      <div className="border-2 border-gray-100 p-2 rounded">
+      <div 
+      className="border-2 border-gray-100 p-2 rounded"
+      >
         {/* Header */}
         <h2 className="text-2xl font-bold mb-4">Media</h2>
 
@@ -111,33 +113,43 @@ const ImageGallery = () => {
         ) : (
           <>
             {/* Media Gallery */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4 mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2 mb-4">
               {Array.isArray(media) &&
                 media.map((file, index) => (
-                  <div
-                    key={`${file.id}-${index}`}
-                    className="border rounded-lg overflow-hidden shadow-lg bg-gray-100 hover:bg-gray-400 flex flex-col items-center justify-center p-2"
-                    style={{
-                      width: "100%", // Take full width of its container
-                    }}
-                  >
-                    <div className="h-full flex items-center justify-center">
-                      <DraggableMedia
-                        id={file?.name || file?.id}
-                        src={`${baseURL}/${file.file_path}`}
-                        type={file.file_type === "mp4" ? "video" : "image"}
-                      />
-                    </div>
-                    <div className="flex items-center justify-center mt-2 text-sm font-bold text-gray-700">
-                      {file.file_type === "mp4" ? (
-                        <MdOutlineOndemandVideo className="mr-2" />
-                      ) : (
-                        <MdImage className="mr-2" />
-                      )}
-                      <span>{file.name}</span>
-                    </div>
-                  </div>
-                ))}
+<div 
+  key={`${file.id}-${index}`}
+  className="border border-gray-300 rounded-lg p-1"
+  style={{ width: "100%" }}
+>
+  <div
+   className="w-full flex items-center justify-center"
+   >
+    <DraggableMedia
+      id={file?.name || file?.id}
+      src={`${baseURL}/${file.file_path}`}
+      type={file.file_type === "mp4" ? "video" : "image"}
+    />
+  </div>
+  <div className="flex items-center justify-center mt-1 text-xs font-bold text-gray-700 w-full">
+    {file.file_type === "mp4" ? (
+      <MdOutlineOndemandVideo className="mr-1" />
+    ) : (
+      <MdImage className="mr-1" />
+    )}
+    <span 
+      className="truncate max-w-[200px]"
+      title={file.name} // This adds native tooltip
+    >
+      {file.name.length > 15 ? `${file.name.substring(0, 26)}...` : file.name}
+    </span>
+    {/* Custom tooltip that appears on hover */}
+    {file.name.length > 15 && (
+      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 mb-6 px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+        {file.name}
+      </div>
+    )}
+  </div>
+</div>                       ))}
             </div>
 
             {/* Load more button */}
