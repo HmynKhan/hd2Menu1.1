@@ -288,7 +288,7 @@ const handleResizeStart = (e, divisionIndex, mediaIndex, initialTime) => {
 const renderDivisions = () => {
 
 
-  return layout.divisions.map((division, index) => (
+  return layout?.divisions?.map((division, index) => (
       
       <div
         key={index}
@@ -301,9 +301,9 @@ const renderDivisions = () => {
         {/* <p className="font-bold" style={{fontSize:'10px'}}>Division {index + 1}</p> */}
         {divisionsMedia[index] && (
           <div className="flex flex-wrap" >
-{divisionsMedia[index].map((media, mediaIndex) => (
+{divisionsMedia[index]?.map((media, mediaIndex) => (
   (() => {
-    const bgColor = getRandomGradient(media.mediaId);
+    const bgColor = getRandomGradient(media?.mediaId);
     const borderColor = darkenColor(bgColor, 50); // Adjust darkness as needed
     {/* console.log("ba56",media); */}
 
@@ -312,8 +312,8 @@ const renderDivisions = () => {
         key={mediaIndex}
         className="relative timeline-media-slider"
         style={{
-          width: `${Math.max(MIN_DURATION, media.appearanceTime) * PIXELS_PER_SECOND}px`,
-          minWidth: `${Math.max(150, MIN_DURATION * PIXELS_PER_SECOND)}px`,
+          width: `${Math.max(MIN_DURATION, media?.appearanceTime) * PIXELS_PER_SECOND}px`,
+          minWidth: `${Math.max(80, MIN_DURATION * PIXELS_PER_SECOND)}px`,
           position: "relative",
           display: "flex",
           alignItems: "center",
@@ -350,7 +350,7 @@ const renderDivisions = () => {
 
         {/* Label */}
         <div style={{ flex: 1, paddingLeft: 8, overflow: "hidden" }}>
-          <div className="text-xs font-semibold truncate" style={{ color: 'black' }}>
+          <div className="text-xs font-semibold truncate" style={{ color: 'black',fontSize:'6px' }}>
             {media.mediaId}
           </div>
           <div style={{ fontSize: 11, color: 'black' }}>
@@ -560,6 +560,11 @@ const renderDivisions = () => {
 <div ref={mediaRef}>
   {layout && layout.divisions && (
     <div className="flex flex-col gap-4">
+
+       <div style={{ overflowX: "auto" ,marginLeft:'89px' }}>
+        {renderTimelineScale()}
+      </div>
+
       {layout.divisions.map((division, index) => {
         // Determine orientation based on layout dimensions
         const isPortrait = layout.height > layout.width;
