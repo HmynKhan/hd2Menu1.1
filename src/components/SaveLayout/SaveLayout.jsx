@@ -484,7 +484,7 @@ className={`border-2 rounded my-1 pt-0 pr-1 pb-1 pl-1 ${
 
         <div
           className="border border-gray-400 relative"
-          style={{ width: miniWidth+5, height: miniHeight+3,  padding: '0', margin: '0'   }}
+          style={{ width: miniWidth+2, height: miniHeight+2,  padding: '0', margin: '0'   }}
         >
           <Stage width={miniWidth+1} height={miniHeight+0} style={{backgroundColor:'#eeeeee',  padding: '0', margin: '0'  }}>
             <Layer>
