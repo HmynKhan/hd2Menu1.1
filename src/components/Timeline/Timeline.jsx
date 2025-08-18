@@ -5,6 +5,8 @@ import { FaImage } from "react-icons/fa6";
 import { FaFileVideo } from "react-icons/fa";
 import { RiCloseCircleLine } from "react-icons/ri";
 import './Timeline.css';
+import TimelinePreview from "./TimelinePreview";
+
 
 const Timeline = ({ layout, onCancle }) => {
   const [divisionsMedia, setDivisionsMedia] = useState({});
@@ -22,6 +24,8 @@ const [affectedDivision, setAffectedDivision] = useState(null);
 const [previousDuration, setPreviousDuration] = useState(5);
 
 console.log("selectedMedia",selectedMedia)
+const [showTimelinePreview, setShowTimelinePreview] = useState(false);
+const [isSaved, setIsSaved] = useState(false);
 
 // for manual duration meida
 
@@ -445,9 +449,11 @@ const renderDivisions = () => {
   const handleCancle = () => {
     setDivisionsMedia({}); // Reset media divisions
     setShowPreview(false); // Hide the Preview
+    setShowTimelinePreview(false); // Hide the TimelinePreview
     onCancle(); // Propagate cancel action
   };
 
+  
   const handleClickOutside = (event) => {
     if (mediaRef.current && !mediaRef.current.contains(event.target)) {
       setSelectedMedia(null);
@@ -474,6 +480,71 @@ const renderDivisions = () => {
   }
 }, [divisionsMedia, durationMode]);
 
+
+// Save timeline data to localStorage
+const saveToLocalStorage = () => {
+  const timelineData = {
+    layout,
+    divisionsMedia,
+    durationMode,
+    totalDuration,
+    savedAt: new Date().toISOString()
+  };
+  localStorage.setItem('savedTimeline', JSON.stringify(timelineData));
+    localStorage.setItem('timelineLayoutSaved', 'true');
+
+  setIsSaved(true);
+  return true;
+};
+
+
+const handleSave = () => {
+  // Check if there is any media in divisions
+  const hasMedia = Object.keys(divisionsMedia).some(key => 
+    divisionsMedia[key] && divisionsMedia[key].length > 0
+  );
+  
+  if (!hasMedia) {
+    alert("Please add some media to the timeline before saving.");
+    return;g
+  }
+
+   if (saveToLocalStorage()) {
+    setShowTimelinePreview(true);
+  } else {
+    alert("Failed to save timeline data");
+  }
+  
+};
+
+
+  // Load timeline data from localStorage
+const loadFromLocalStorage = () => {
+  const savedData = localStorage.getItem('savedTimeline');
+  if (savedData) {
+    const { layout: savedLayout, divisionsMedia: savedDivisionsMedia, 
+            durationMode: savedDurationMode, totalDuration: savedTotalDuration } = JSON.parse(savedData);
+    
+    // Only load if the layout IDs match
+    if (savedLayout && savedLayout?.id === layout?.id) {
+      setDivisionsMedia(savedDivisionsMedia || {});
+      setDurationMode(savedDurationMode || "Automatic");
+      setTotalDuration(savedTotalDuration || 5);
+      setIsSaved(true);
+      return true;
+    }
+  }
+  return false;
+};
+
+
+
+
+
+useEffect(() => {
+  // Load saved data when component mounts
+  loadFromLocalStorage();
+}, [layout]); // Re-run when layout changes
 
 
   return (
@@ -638,11 +709,13 @@ const scaleY = previewHeight / layout.height;
         {/* Buttons */}
         {layout && (
           <div className="flex items-center justify-end mt-4 gap-2">
-            <button
-                        style={{fontSize:'10px'}}
-              className="px-2 py-1 text-white bg-green-500 hover:bg-green-700 cursor-pointer rounded"
-            >
-Save            </button>
+<button
+  style={{fontSize:'10px'}}
+  className="px-2 py-1 text-white bg-green-500 hover:bg-green-700 cursor-pointer rounded"
+  onClick={handleSave}  // ye line change karo
+>
+  Save            
+</button>
 
             <button
             style={{fontSize:'10px'}}
@@ -658,6 +731,15 @@ Save            </button>
             >
               Cancel
             </button>
+            {showTimelinePreview && (
+  <div className="mt-8">
+    <TimelinePreview
+      layout={layout}
+      divisionsMedia={divisionsMedia}
+      onClose={() => setShowTimelinePreview(false)}
+    />
+  </div>
+)}
 
             {showPreview && (
               <div className="mt-8">

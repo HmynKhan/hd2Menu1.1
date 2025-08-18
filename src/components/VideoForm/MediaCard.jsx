@@ -72,7 +72,7 @@ const cardData = [
   };
 
   return (
-    <div className="container-fluid py-1 mt-1">
+    <div className="container-fluid py-1 mt-3">
       <div style={styles.mediaCards}>
         {cardData.map((card, index) => {
           const IconComponent = card.icon;
