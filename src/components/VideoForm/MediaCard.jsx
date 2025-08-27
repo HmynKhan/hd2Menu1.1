@@ -48,7 +48,7 @@ const cardData = [
   {
     icon: FaBullseye,
     title: "Campaign",
-    route: `${baseURL}`,
+    route: `https://hd2.dev.app.hd2.menu`,
   },
   {
     icon: FaFileAlt,
