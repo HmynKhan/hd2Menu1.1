@@ -8,6 +8,7 @@ import {
   FaBullseye, 
   FaFileAlt 
 } from 'react-icons/fa';
+import { MdOutlineWidgets } from "react-icons/md";
 
 const MediaCards = () => {
 
@@ -21,7 +22,7 @@ const cardData = [
   },
   {
     icon: FaRocket,
-    title: "Layout",
+    title: "Desginer Layout",
     route: `${baseURL}/admin/layouts`
   },
   {
@@ -37,36 +38,37 @@ const cardData = [
   {
     icon: FaPollH,
     title: "Composition",
-    route: `https://hd2.dev.app.hd2.menu/`,
-    external: true
+    route: `https://editor.app.hd2.menu/`,
   },
   {
     icon: FaLayerGroup,
-    title: "Playlist",
+    title: "Publish",
     route: `${baseURL}/admin/playlists/create`
   },
   {
     icon: FaBullseye,
     title: "Campaign",
-    route: `https://hd2.dev.app.hd2.menu/`,
-    external: true
+    route: `${baseURL}`,
   },
   {
     icon: FaFileAlt,
     title: "Template",
     route: `${baseURL}/admin/templates`
+  },
+    {
+    icon: MdOutlineWidgets,
+    title: "Widget",
+    route: ``
   }
+
 ];
+
 
 
   const handleCardClick = (route, external = false) => {
     if (external) {
-      window.open(route, '_blank');
+      window.location.href = route;
     } else {
-      // For internal routes, you can use your routing solution
-      // For example, if using React Router:
-      // navigate(route);
-      // For now, using window.location for demonstration
       window.location.href = route;
     }
   };
@@ -120,7 +122,7 @@ const cardData = [
 const styles = {
   mediaCards: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(125px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(115px, 1fr))',
     gap: '10px',
     padding: '0px 0',
     maxWidth: '1200px',
